@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import os
 
 # Read the token from the file
 with open("token.txt", "r") as file:
@@ -28,13 +29,11 @@ async def on_ready():
 # Test command
 @bot.command()
 async def hello(ctx):
-    print(f'{ctx.author.mention} excuted the hello command.')
     await ctx.send("Hello cc! " + meloncat)
 
 # A command that displays server information
 @bot.command()
 async def whatisthiserver(ctx):
-    print("{ctx.author.mention} executed the whatisthiserver command.")
     await ctx.send(
         f"This is {ctx.guild.name} server, created at {ctx.guild.created_at} and has {ctx.guild.member_count} members!"
     )
@@ -42,7 +41,6 @@ async def whatisthiserver(ctx):
 # A command that displays the bot's commands
 @bot.command()
 async def cmds(ctx):
-    print(f'{ctx.author.mention} executed the cmds command.')
     embed = discord.Embed(
         title="Bot Commands",
         description="Here are the commands you can use with this bot " + catjam + " :",
@@ -61,7 +59,6 @@ async def cmds(ctx):
 # A command that steals social credit
 @bot.command()
 async def steelcredit(ctx, member: discord.Member = None):
-    print(f"{ctx.author.mention} executed the steelcredit command.")
     if member is None:
         embed = discord.Embed(
             title="Missing Argument",
@@ -80,7 +77,6 @@ async def steelcredit(ctx, member: discord.Member = None):
 # A command that displays user information
 @bot.command()
 async def userinfo(ctx, member: discord.Member):
-    print(f"{ctx.author.mention} executed the userinfo command.")
     embed = discord.Embed(
         title=f"User Info - {member.display_name}",
         description=f"Here is the information for {member.mention}:",
@@ -139,6 +135,48 @@ async def changestate(ctx, status: str, activity_type: str, *, activity_name: st
 # !changestate idle listening Spotify
 # !changestate dnd watching a movie
 # !changestate invisible streaming Live Coding https://twitch.tv/yourchannel
+
+@bot.command()
+async def join(ctx):
+    # Check if the user is in a voice channel
+    if ctx.author.voice is None:
+        await ctx.send("You are not in a voice channel!")
+        return
+
+    # Get the voice channel the user is in
+    channel = ctx.author.voice.channel
+
+    # Connect to the voice channel
+    await channel.connect()
+    await ctx.send(f"Joined {channel.name}!")
+
+# Example usage:
+# !join
+
+# Command to play an MP3 file
+@bot.command()
+async def play(ctx, filename: str):
+    if ctx.voice_client is None:
+        await ctx.send("I am not in a voice channel! Use !join to make me join a voice channel first.")
+        return
+
+    if not os.path.isfile(filename):
+        await ctx.send(f"The file {filename} does not exist.")
+        return
+
+    source = discord.FFmpegPCMAudio(filename)
+    ctx.voice_client.play(source, after=lambda e: print(f"Finished playing: {e}"))
+    await ctx.send(f"Now playing: {filename}")
+
+# Command to leave a voice channel
+@bot.command()
+async def leave(ctx):
+    if ctx.voice_client is None:
+        await ctx.send("I am not in a voice channel!")
+        return
+
+    await ctx.voice_client.disconnect()
+    await ctx.send("Disconnected from the voice channel.")
 
 # Run the bot using the token you copied earlier
 bot.run(token)
