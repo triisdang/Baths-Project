@@ -95,5 +95,50 @@ async def userinfo(ctx, member: discord.Member):
     embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
+# A command to change the bot's status and activity
+@bot.command()
+async def changestate(ctx, status: str, activity_type: str, *, activity_name: str):
+    if ctx.author.name == "chipoverhere":
+        # Map the status string to discord.Status
+        status_map = {
+            "online": discord.Status.online,
+            "idle": discord.Status.idle,
+            "dnd": discord.Status.dnd,
+            "invisible": discord.Status.invisible
+        }
+
+        # Map the activity type string to discord.ActivityType
+        activity_type_map = {
+            "game": discord.ActivityType.playing,
+            "streaming": discord.ActivityType.streaming,
+            "listening": discord.ActivityType.listening,
+            "watching": discord.ActivityType.watching
+        }
+
+        # Get the status and activity type from the maps
+        new_status = status_map.get(status.lower())
+        new_activity_type = activity_type_map.get(activity_type.lower())
+
+        if new_status is None:
+            await ctx.send("Invalid status. Valid options are: online, idle, dnd, invisible.")
+            return
+
+        if new_activity_type is None:
+            await ctx.send("Invalid activity type. Valid options are: game, streaming, listening, watching.")
+            return
+
+        # Set the new presence
+        activity = discord.Activity(type=new_activity_type, name=activity_name)
+        await bot.change_presence(status=new_status, activity=activity)
+        await ctx.send(f"Changed status to {status} and activity to {activity_type} {activity_name}.")
+    else:
+        await ctx.send("You do not have permission to use this command.")
+
+# Example usage:
+# !changestate online game Minecraft
+# !changestate idle listening Spotify
+# !changestate dnd watching a movie
+# !changestate invisible streaming Live Coding https://twitch.tv/yourchannel
+
 # Run the bot using the token you copied earlier
 bot.run(token)
