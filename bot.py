@@ -21,14 +21,14 @@ intents.message_content = True  # Enable the message content intent
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # When the bot is ready
-@bot.event
+@bot.event 
 async def on_ready():
     print(f'I am ready! My name is {bot.user}!')
 
 # Test command
 @bot.command()
 async def hello(ctx):
-    print("{ctx.author.mention} executed the hello command.")
+    print(f'{ctx.author.mention} excuted the hello command.')
     await ctx.send("Hello cc! " + meloncat)
 
 # A command that displays server information
@@ -42,7 +42,7 @@ async def whatisthiserver(ctx):
 # A command that displays the bot's commands
 @bot.command()
 async def cmds(ctx):
-    print("{ctx.author.mention} executed the cmds command.")
+    print(f'{ctx.author.mention} executed the cmds command.')
     embed = discord.Embed(
         title="Bot Commands",
         description="Here are the commands you can use with this bot " + catjam + " :",
@@ -61,7 +61,7 @@ async def cmds(ctx):
 # A command that steals social credit
 @bot.command()
 async def steelcredit(ctx, member: discord.Member = None):
-    print("{ctx.author.mention} executed the steelcredit command.")
+    print(f"{ctx.author.mention} executed the steelcredit command.")
     if member is None:
         embed = discord.Embed(
             title="Missing Argument",
@@ -80,7 +80,7 @@ async def steelcredit(ctx, member: discord.Member = None):
 # A command that displays user information
 @bot.command()
 async def userinfo(ctx, member: discord.Member):
-    print("{ctx.author.mention} executed the userinfo command.")
+    print(f"{ctx.author.mention} executed the userinfo command.")
     embed = discord.Embed(
         title=f"User Info - {member.display_name}",
         description=f"Here is the information for {member.mention}:",
