@@ -12,7 +12,7 @@ doggokek = "<:doggokek:1334142827050831944>"
 cutecat = "<:cutecat:1334142840871325777>"
 catjam = "<:catjam:1334142860236161135>"
 bleh = "<:bleh:1322913813418475622>"
-meloncat = "<:meloncat:1322913721697177610>"
+meloncat = "<:meloncat:1322913721697177610>"    
 
 # Set up the bot with the necessary intents
 intents = discord.Intents.default()
