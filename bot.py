@@ -3,7 +3,7 @@ from discord.ext import commands
 
 # Read the token from the file
 with open("token.txt", "r") as file:
-    token = file.read().strip()
+    token = file.read().strip() # replace content in file token.txt with your own token
 
 # Pair emojis
 fling = "<:fling:1334142789788897352>"
