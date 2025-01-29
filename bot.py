@@ -1,7 +1,9 @@
 import discord
 from discord.ext import commands
 
-token = "MTMyMjkxMzU3MDYxMDIyMTEzMA.GsSV2a.cTraUWbcefv5rTpXX1Isi-A1XbA_eISbVIlNUc"
+# Read the token from the file
+with open("token.txt", "r") as file:
+    token = file.read().strip()
 
 # Pair emojis
 fling = "<:fling:1334142789788897352>"
@@ -50,7 +52,7 @@ async def cmds(ctx):
     embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
-    embed.set_footer(text="Bot by Chipoverhere " + cutecat)
+    embed.set_footer(text="Bot by Chipoverhere " + cutecat, icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
 # A command that steals social credit
