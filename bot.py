@@ -33,8 +33,11 @@ intents.message_content = True  # Enable the message content intent
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# Dictionary to store chat histories
+chat_histories = {}
+
 # Function to interact with Google Gemini API
-def get_gemini_response(prompt):
+def get_gemini_response(user_id, prompt):
     generation_config = {
         "temperature": 1,
         "top_p": 0.95,
@@ -44,43 +47,41 @@ def get_gemini_response(prompt):
     }
 
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash-8b",
+        model_name="gemini-1.5-pro",
         generation_config=generation_config,
     )
 
-    chat_session = model.start_chat(
-        history=[
-            {
-                "role": "user",
-                "parts": [
-                    "Who are you?",
-                ],
-            },
-            {
-                "role": "model",
-                "parts": [
-                    "I am Smart AI, a Discord bot, created by Chipoverhere.\n",
-                ],
-            },
-        ]
-    )
+    # Get the chat history for the user
+    history = chat_histories.get(user_id, [])
+
+    chat_session = model.start_chat(history=history)
 
     response = chat_session.send_message(prompt)
+
+    # Update the chat history
+    history.append({"role": "user", "parts": [prompt]})
+    history.append({"role": "model", "parts": [response.text]})
+    chat_histories[user_id] = history
+
     return response.text
 
 # When the bot is ready
 @bot.event
 async def on_ready():
+    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")   
+    await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f'I am ready! My name is {bot.user}!')
 
 # Test command
 @bot.command()
 async def hello(ctx):
+    print(f'{ctx.author} just executed the hello command.')
     await ctx.send("Hello cc! " + meloncat)
 
 # A command that displays server information
 @bot.command()
 async def whatisthisserver(ctx):
+    print(f'{ctx.author} just executed the whatisthisserver command.')
     await ctx.send(
         f"This is {ctx.guild.name} server, created at {ctx.guild.created_at} and has {ctx.guild.member_count} members!"
     )
@@ -88,6 +89,7 @@ async def whatisthisserver(ctx):
 # A command that displays the bot's commands
 @bot.command()
 async def cmds(ctx):
+    print(f'{ctx.author} just executed the cmds command.')
     embed = discord.Embed(
         title="Bot Commands",
         description="Here are the commands you can use with this bot " + catjam + " :",
@@ -104,13 +106,14 @@ async def cmds(ctx):
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
     embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
-    embed.add_field(name="!ai", value="Talk to Google's Gemini!", inline=False)  # Fixed typo here
+    embed.add_field(name="!ai", value="Talk to Google's Gemini!", inline=False)
     embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
 # A command that steals social credit
 @bot.command()
 async def steelcredit(ctx, member: discord.Member = None):
+    print(f'{ctx.author} just executed the steelcredit command.')
     if member is None:
         embed = discord.Embed(
             title="Missing Argument",
@@ -129,6 +132,7 @@ async def steelcredit(ctx, member: discord.Member = None):
 # A command that displays user information
 @bot.command()
 async def userinfo(ctx, member: discord.Member):
+    print(f'{ctx.author} just executed the userinfo command.')
     embed = discord.Embed(
         title=f"User Info - {member.display_name}",
         description=f"Here is the information for {member.mention}:",
@@ -146,6 +150,7 @@ async def userinfo(ctx, member: discord.Member):
 # A command to change the bot's status and activity
 @bot.command()
 async def changestate(ctx, status: str, activity_type: str, *, activity_name: str):
+    print(f'{ctx.author} just executed the changestate command.')
     if ctx.author.name == "chipoverhere":
         # Map the status string to discord.Status
         status_map = {
@@ -191,6 +196,7 @@ async def changestate(ctx, status: str, activity_type: str, *, activity_name: st
 # Command to join a voice channel
 @bot.command()
 async def join(ctx):
+    print(f'{ctx.author} just executed the join command.')
     # Check if the user is in a voice channel
     if ctx.author.voice is None:
         await ctx.send("You are not in a voice channel!")
@@ -206,6 +212,7 @@ async def join(ctx):
 # Command to play an MP3 file
 @bot.command()
 async def play(ctx, filename: str):
+    print(f'{ctx.author} just executed the play command.')
     if ctx.voice_client is None:
         await ctx.send("I am not in a voice channel! Use !join to make me join a voice channel first.")
         return
@@ -221,6 +228,7 @@ async def play(ctx, filename: str):
 # Command to leave a voice channel
 @bot.command()
 async def leave(ctx):
+    print(f'{ctx.author} just executed the leave command.')
     if ctx.voice_client is None:
         await ctx.send("I am not in a voice channel!")
         return
@@ -248,7 +256,7 @@ class RussianRouletteGame:
             embed.add_field(name="Status", value="Waiting for players to join...", inline=False)
         elif not self.game_active and self.players:
             players_list = "\n".join([f"• {player.mention}" for player in self.players])
-            embed.add_field(name="Players Joined", value=players_list, inline=False)
+            embed.add_field(name="Players Joined To Death", value=players_list, inline=False)
             embed.add_field(name="Status", value="Waiting for more players or game start", inline=False)
         else:
             players_list = "\n".join([f"• {player.mention}" + (" 🎯" if i == self.current_player_index else "")
@@ -291,10 +299,10 @@ class RussianRouletteButtons(discord.ui.View):
             await self.update_message(interaction)
             await interaction.response.defer()
 
-    @discord.ui.button(label="Pull Trigger", style=discord.ButtonStyle.danger, disabled=True)
+    @discord.ui.button(label="Pull Trigger:skull:", style=discord.ButtonStyle.danger, disabled=True)
     async def pull_trigger(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.game.game_active or interaction.user != self.game.players[self.game.current_player_index]:
-            await interaction.response.defer()
+            await interaction.response.send_message("It's not your turn!", ephemeral=True)
             return
 
         if self.game.current_chamber == self.game.bullet_position:
@@ -306,12 +314,13 @@ class RussianRouletteButtons(discord.ui.View):
                 button.disabled = True
                 winner_embed = discord.Embed(
                     title=f"🎉 Game Over!, Call 911 {alert}",
-                    description=f"{self.game.players[0].mention} has won the game! {eliminated_player.mention} died! {fling}",
+                    description=f"{self.game.players[0].mention} has won the game{doggokek}! {eliminated_player.mention} died! {fling}",
                     color=discord.Color.green()
                 )
                 await interaction.message.edit(embed=winner_embed, view=None)
                 await interaction.response.defer()
-                await ctx.send("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMWlheGowbjltcjBvd3pvOWhxN2c4eGVwemJ1OW83OGRyYTBxZ3pqNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/DQb9xdHQwFl9fvJ1ls/giphy.gif")
+                await interaction.channel.send(f"Pov {self.game.players[0].mention} rn :")
+                await interaction.channel.send("https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExenlyM2gzbnc2eG5ydnJ3ODlkeGdvZXN1dXg0N3p4NTRlc3ZkdXIzayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nrpCs0Bwdxp8k9FoPy/giphy.gif")
                 return
         else:
             self.game.current_chamber = (self.game.current_chamber + 1) % 6
@@ -322,14 +331,18 @@ class RussianRouletteButtons(discord.ui.View):
 
 @bot.command()
 async def russ(ctx):
+    print(f'{ctx.author} just executed the russ command.')
     view = RussianRouletteButtons()
     await ctx.send(embed=view.game.get_status_embed(), view=view)
 
 # AI command
 @bot.command()
 async def ai(ctx, *, prompt: str):
-    response = get_gemini_response(prompt)
-    await ctx.send(response)
+    print(f'{ctx.author} just executed the ai command.')
+    response = get_gemini_response(ctx.author.id, prompt)
+    # Split the response into chunks of 2000 characters
+    for i in range(0, len(response), 2000):
+        await ctx.send(response[i:i+2000])
 
 # Run the bot using the token you copied earlier
 bot.run(token)
