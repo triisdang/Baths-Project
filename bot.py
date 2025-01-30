@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import random
 import requests
+import google.generativeai as genai
 
 # Read the token from the file
 with open("token.txt", "r") as file:
@@ -11,6 +12,9 @@ with open("token.txt", "r") as file:
 # Read the Google Gemini API key from the file
 with open("tokengemini.txt", "r") as file:
     gemini_api_key = file.read().strip()
+
+# Configure the Google Gemini API
+genai.configure(api_key=gemini_api_key)
 
 # Pair emojis
 yeah = "<a:animeahhhhh:1334142756934651927>"
@@ -31,18 +35,38 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Function to interact with Google Gemini API
 def get_gemini_response(prompt):
-    url = "https://api.google.com/gemini/v1/complete"  # Replace with the actual Google Gemini API endpoint
-    headers = {
-        "Authorization": f"Bearer {gemini_api_key}",
-        "Content-Type": "application/json"
+    generation_config = {
+        "temperature": 1,
+        "top_p": 0.95,
+        "top_k": 40,
+        "max_output_tokens": 8192,
+        "response_mime_type": "text/plain",
     }
-    data = {
-        "prompt": prompt,
-        "max_tokens": 150  # Adjust as needed
-    }
-    response = requests.post(url, headers=headers, json=data)
-    response_json = response.json()
-    return response_json.get("choices", [{}])[0].get("text", "No response from Gemini")
+
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash-8b",
+        generation_config=generation_config,
+    )
+
+    chat_session = model.start_chat(
+        history=[
+            {
+                "role": "user",
+                "parts": [
+                    "Who are you?",
+                ],
+            },
+            {
+                "role": "model",
+                "parts": [
+                    "I'am Smart AI, A discord bot, created by Chipoverhere.\n",
+                ],
+            },
+        ]
+    )
+
+    response = chat_session.send_message(prompt)
+    return response.text
 
 # When the bot is ready
 @bot.event
