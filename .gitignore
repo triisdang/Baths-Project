@@ -1,4 +1,5 @@
-
+// File: .gitignore
 token.txt
 tokengemini.txt
 opntoken.txt
+groqtoken.txt

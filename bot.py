@@ -9,9 +9,9 @@ import json
 with open("token.txt", "r") as file:
     token = file.read().strip()  # replace content in file token.txt with your own token
 
-# Read the OpenRouter API key from the file
-with open("opntoken.txt", "r") as file:
-    openrouter_api_key = file.read().strip()
+# Read the Groq API key from the file
+with open("groqtoken.txt", "r") as file:
+    groq_api_key = file.read().strip()
 
 # Pair emojis
 fling = "<:fling:1334142789788897352>"
@@ -28,32 +28,25 @@ intents.message_content = True  # Enable the message content intent
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Function to interact with OpenRouter API
-def get_openrouter_response(prompt):
-    url = "https://openrouter.ai/api/v1/chat/completions"
+# Function to interact with Groq API
+def get_groq_response(prompt):
+    url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {openrouter_api_key}",
-        "HTTP-Referer": "https://your-site-url.com",  # Optional. Replace with your site URL.
-        "X-Title": "Your Site Name",  # Optional. Replace with your site name.
+        "Authorization": f"Bearer {groq_api_key}",
         "Content-Type": "application/json"
     }
     data = {
-        "model": "deepseek/deepseek-r1:free",
+        "model": "llama-3.3-70b-versatile",
         "messages": [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt
-                    }
-                ]
+                "content": prompt
             }
         ]
     }
     response = requests.post(url, headers=headers, data=json.dumps(data))
     response_json = response.json()
-    return response_json.get("choices", [{}])[0].get("message", {}).get("content", "No response from the AI,Or just cooldown,sorry!")
+    return response_json.get("choices", [{}])[0].get("message", {}).get("content", "No response from Groq API")
 
 # When the bot is ready
 @bot.event
@@ -329,7 +322,7 @@ async def russ(ctx):
 @bot.command()
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
-    response = get_openrouter_response(prompt)
+    response = get_groq_response(prompt)
     # Split the response into chunks of 2000 characters
     for i in range(0, len(response), 2000):
         await ctx.send(response[i:i+2000])
@@ -346,7 +339,7 @@ async def funuser(ctx, member: discord.Member):
         )
         await ctx.send(embed=embed)
     else:
-        response = get_openrouter_response("Make this user name funny: " + member.display_name)
+        response = get_groq_response("Make this user name funny(please cook the name into some thing really funny and meme. also, be mean too.): " + member.display_name)
         # Split the response into chunks of 2000 characters
         for i in range(0, len(response), 2000):
             await ctx.send(response[i:i+2000])
