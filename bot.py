@@ -38,7 +38,7 @@ def get_openrouter_response(prompt):
         "Content-Type": "application/json"
     }
     data = {
-        "model": "google/gemini-2.0-flash-thinking-exp:free",
+        "model": "deepseek/deepseek-r1:free",
         "messages": [
             {
                 "role": "user",
@@ -53,7 +53,7 @@ def get_openrouter_response(prompt):
     }
     response = requests.post(url, headers=headers, data=json.dumps(data))
     response_json = response.json()
-    return response_json.get("choices", [{}])[0].get("message", {}).get("content", "No response from OpenRouter")
+    return response_json.get("choices", [{}])[0].get("message", {}).get("content", "No response from the AI,Or just cooldown,sorry!")
 
 # When the bot is ready
 @bot.event
