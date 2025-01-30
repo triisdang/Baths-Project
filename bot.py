@@ -58,7 +58,8 @@ async def cmds(ctx):
     embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
-    embed.set_footer(text="Bot by Chipoverhere " + cutecat, icon_url=ctx.author.avatar.url)
+    embed.add_field(name="!russ", value="Play russian roulatte with friends!", inline=False)
+    embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
 # A command that steals social credit
