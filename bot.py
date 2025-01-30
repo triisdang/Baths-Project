@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 import os
 import random
-import openai
+import requests
+import json
 
 # Read the token from the file
 with open("token.txt", "r") as file:
@@ -27,21 +28,18 @@ intents.message_content = True  # Enable the message content intent
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Configure the OpenRouter API
-client = openai.OpenAI(
-    base_url="hhttps://openrouter.ai/api/v1",
-    api_key=openrouter_api_key,
-)
-
 # Function to interact with OpenRouter API
 def get_openrouter_response(prompt):
-    completion = client.chat.completions.create(
-        extra_headers={
-            "HTTP-Referer": "https://your-site-url.com",  # Optional. Replace with your site URL.
-            "X-Title": "Your Site Name",  # Optional. Replace with your site name.
-        },
-        model="google/gemini-2.0-flash-thinking-exp:free",
-        messages=[
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {openrouter_api_key}",
+        "HTTP-Referer": "https://your-site-url.com",  # Optional. Replace with your site URL.
+        "X-Title": "Your Site Name",  # Optional. Replace with your site name.
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "google/gemini-2.0-flash-thinking-exp:free",
+        "messages": [
             {
                 "role": "user",
                 "content": [
@@ -52,8 +50,10 @@ def get_openrouter_response(prompt):
                 ]
             }
         ]
-    )
-    return completion.choices[0].message.content
+    }
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response_json = response.json()
+    return response_json.get("choices", [{}])[0].get("message", {}).get("content", "No response from OpenRouter")
 
 # When the bot is ready
 @bot.event
