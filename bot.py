@@ -7,6 +7,8 @@ with open("token.txt", "r") as file:
     token = file.read().strip() # replace content in file token.txt with your own token
 
 # Pair emojis
+yeah = "<a:animeahhhhh:1334142756934651927>"
+alert = "<a:alert:1334142774035087423>"
 fling = "<a:fling:1334142789788897352>"
 ooooo = "<:ooooo:1334142810986774620>"
 doggokek = "<:doggokek:1334142827050831944>"
@@ -51,8 +53,8 @@ async def cmds(ctx):
     embed.add_field(name="!whatisthisserver", value="Displays server information.", inline=False)
     embed.add_field(name="!cmds", value="Displays this help message.", inline=False)
     embed.add_field(name="!join", value="Join your voice channel you are in", inline=False)
-    embed.add_field(name="!leave", value="leave voice channel", inline=False)
-    embed.add_field(name="!play", value="Play an MP3 file in the voice channel", inline=False)
+    embed.add_field(name="!leave", value="leave voice channel[buggy]", inline=False)
+    embed.add_field(name="!play", value="Play an MP3 file in the voice channel [buggy]", inline=False)
     embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
@@ -182,18 +184,101 @@ async def leave(ctx):
     await ctx.send("Disconnected from the voice channel.")
 
 # Russian Roulette command 
-class RussianRouletteButton(discord.ui.View):
-    @discord.ui.button(label="Pull the Trigger", style=discord.ButtonStyle.danger)
-    async def pull_trigger(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if random.randint(1, 6) == 1:
-            await interaction.response.send_message(f"{interaction.user.mention} pulled the trigger and lost! 💀 "+ filng)
+class RussianRouletteGame:
+    def __init__(self):
+        self.players = []
+        self.current_player_index = 0
+        self.bullet_position = random.randint(0, 5)
+        self.current_chamber = 0
+        self.game_active = False
+        
+    def get_status_embed(self):
+        embed = discord.Embed(
+            title="Russian Roulette",
+            description="The tension rises as the cylinder spins...",
+            color=discord.Color.red()
+        )
+        
+        if not self.game_active and not self.players:
+            embed.add_field(name="Status", value="Waiting for players to join...", inline=False)
+        elif not self.game_active and self.players:
+            players_list = "\n".join([f"• {player.mention}" for player in self.players])
+            embed.add_field(name="Players Joined", value=players_list, inline=False)
+            embed.add_field(name="Status", value="Waiting for more players or game start", inline=False)
         else:
-            await interaction.response.send_message(f"{interaction.user.mention} pulled the trigger and survived! 🎉")
+            players_list = "\n".join([f"• {player.mention}" + (" 🎯" if i == self.current_player_index else "") 
+                                    for i, player in enumerate(self.players)])
+            embed.add_field(name="Players", value=players_list, inline=False)
+            embed.add_field(name="Chamber", value=f"{self.current_chamber + 1}/6", inline=True)
+            embed.add_field(name="Current Turn", value=self.players[self.current_player_index].mention, inline=True)
+            
+        return embed
+
+class RussianRouletteButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=180)
+        self.game = RussianRouletteGame()
+        self.message = None
+
+    async def update_message(self, interaction: discord.Interaction):
+        await interaction.message.edit(embed=self.game.get_status_embed(), view=self)
+
+    @discord.ui.button(label="Join Game", style=discord.ButtonStyle.primary)
+    async def join_game(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user not in self.game.players:
+            self.game.players.append(interaction.user)
+            
+            if len(self.game.players) >= 2:
+                self.children[0].disabled = True
+                self.children[1].disabled = False
+            
+            await self.update_message(interaction)
+            await interaction.response.defer()
+
+    @discord.ui.button(label="Start Game", style=discord.ButtonStyle.success, disabled=True)
+    async def start_game(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if len(self.game.players) >= 2:
+            self.game.game_active = True
+            random.shuffle(self.game.players)
+            button.disabled = True
+            self.children[2].disabled = False
+            
+            await self.update_message(interaction)
+            await interaction.response.defer()
+
+    @discord.ui.button(label="Pull Trigger", style=discord.ButtonStyle.danger, disabled=True)
+    async def pull_trigger(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.game.game_active or interaction.user != self.game.players[self.game.current_player_index]:
+            await interaction.response.defer()
+            return
+
+        if self.game.current_chamber == self.game.bullet_position:
+            eliminated_player = self.game.players.pop(self.game.current_player_index)
+            self.game.current_player_index %= len(self.game.players)
+            
+            if len(self.game.players) == 1:
+                self.game.game_active = False
+                button.disabled = True
+                winner_embed = discord.Embed(
+                    title=f"🎉 Game Over!, Call 911 {alert}",
+                    description=f"{self.game.players[0].mention} has won the game! {eliminated_player.mention} died! {fling}",
+                    color=discord.Color.green()
+                )
+                await interaction.message.edit(embed=winner_embed, view=None)
+                await interaction.response.defer()
+                await ctx.send("https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMWlheGowbjltcjBvd3pvOWhxN2c4eGVwemJ1OW83OGRyYTBxZ3pqNiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/DQb9xdHQwFl9fvJ1ls/giphy.gif")
+                return
+        else:
+            self.game.current_chamber = (self.game.current_chamber + 1) % 6
+            self.game.current_player_index = (self.game.current_player_index + 1) % len(self.game.players)
+        
+        await self.update_message(interaction)
+        await interaction.response.defer()
 
 @bot.command()
 async def russ(ctx):
-    view = RussianRouletteButton()
-    await ctx.send("Russian Roulette: Click the button to pull the trigger!", view=view)
+    view = RussianRouletteButtons()
+    await ctx.send(embed=view.game.get_status_embed(), view=view)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
