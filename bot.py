@@ -7,7 +7,7 @@ with open("token.txt", "r") as file:
     token = file.read().strip() # replace content in file token.txt with your own token
 
 # Pair emojis
-fling = "<:fling:1334142789788897352>"
+fling = "<a:fling:1334142789788897352>"
 ooooo = "<:ooooo:1334142810986774620>"
 doggokek = "<:doggokek:1334142827050831944>"
 cutecat = "<:cutecat:1334142840871325777>"
@@ -33,7 +33,7 @@ async def hello(ctx):
 
 # A command that displays server information
 @bot.command()
-async def whatisthiserver(ctx):
+async def whatisthisserver(ctx):
     await ctx.send(
         f"This is {ctx.guild.name} server, created at {ctx.guild.created_at} and has {ctx.guild.member_count} members!"
     )
@@ -48,8 +48,11 @@ async def cmds(ctx):
     )
     embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
     embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
-    embed.add_field(name="!whatisthiserver", value="Displays server information.", inline=False)
+    embed.add_field(name="!whatisthisserver", value="Displays server information.", inline=False)
     embed.add_field(name="!cmds", value="Displays this help message.", inline=False)
+    embed.add_field(name="!join", value="Join your voice channel you are in", inline=False)
+    embed.add_field(name="!leave", value="leave voice channel", inline=False)
+    embed.add_field(name="!play", value="Play an MP3 file in the voice channel", inline=False)
     embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
@@ -177,6 +180,11 @@ async def leave(ctx):
 
     await ctx.voice_client.disconnect()
     await ctx.send("Disconnected from the voice channel.")
+
+@bot.command()
+async def russianrualte(ctx):
+    await ctx.send("OwO")
+
 
 # Run the bot using the token you copied earlier
 bot.run(token)
