@@ -2,9 +2,15 @@ import discord
 from discord.ext import commands
 import os
 import random
+import requests
+
 # Read the token from the file
 with open("token.txt", "r") as file:
-    token = file.read().strip() # replace content in file token.txt with your own token
+    token = file.read().strip()  # Replace content in file token.txt with your own token
+
+# Read the Google Gemini API key from the file
+with open("tokengemini.txt", "r") as file:
+    gemini_api_key = file.read().strip()
 
 # Pair emojis
 yeah = "<a:animeahhhhh:1334142756934651927>"
@@ -15,7 +21,7 @@ doggokek = "<:doggokek:1334142827050831944>"
 cutecat = "<:cutecat:1334142840871325777>"
 catjam = "<:catjam:1334142860236161135>"
 bleh = "<:bleh:1322913813418475622>"
-meloncat = "<:meloncat:1322913721697177610>"    
+meloncat = "<:meloncat:1322913721697177610>"
 
 # Set up the bot with the necessary intents
 intents = discord.Intents.default()
@@ -23,8 +29,23 @@ intents.message_content = True  # Enable the message content intent
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# Function to interact with Google Gemini API
+def get_gemini_response(prompt):
+    url = "https://api.google.com/gemini/v1/complete"  # Replace with the actual Google Gemini API endpoint
+    headers = {
+        "Authorization": f"Bearer {gemini_api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "prompt": prompt,
+        "max_tokens": 150  # Adjust as needed
+    }
+    response = requests.post(url, headers=headers, json=data)
+    response_json = response.json()
+    return response_json.get("choices", [{}])[0].get("text", "No response from Gemini")
+
 # When the bot is ready
-@bot.event 
+@bot.event
 async def on_ready():
     print(f'I am ready! My name is {bot.user}!')
 
@@ -53,12 +74,13 @@ async def cmds(ctx):
     embed.add_field(name="!whatisthisserver", value="Displays server information.", inline=False)
     embed.add_field(name="!cmds", value="Displays this help message.", inline=False)
     embed.add_field(name="!join", value="Join your voice channel you are in", inline=False)
-    embed.add_field(name="!leave", value="leave voice channel[buggy]", inline=False)
+    embed.add_field(name="!leave", value="Leave voice channel [buggy]", inline=False)
     embed.add_field(name="!play", value="Play an MP3 file in the voice channel [buggy]", inline=False)
     embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
-    embed.add_field(name="!russ", value="Play russian roulatte with friends!", inline=False)
+    embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
+    embed.add_filed(name="!ai", value="Talk to Google's Gemini!", inline=False)
     embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
@@ -142,6 +164,7 @@ async def changestate(ctx, status: str, activity_type: str, *, activity_name: st
 # !changestate dnd watching a movie
 # !changestate invisible streaming Live Coding https://twitch.tv/yourchannel
 
+# Command to join a voice channel
 @bot.command()
 async def join(ctx):
     # Check if the user is in a voice channel
@@ -155,9 +178,6 @@ async def join(ctx):
     # Connect to the voice channel
     await channel.connect()
     await ctx.send(f"Joined {channel.name}!")
-
-# Example usage:
-# !join
 
 # Command to play an MP3 file
 @bot.command()
@@ -184,7 +204,7 @@ async def leave(ctx):
     await ctx.voice_client.disconnect()
     await ctx.send("Disconnected from the voice channel.")
 
-# Russian Roulette command 
+# Russian Roulette command
 class RussianRouletteGame:
     def __init__(self):
         self.players = []
@@ -192,14 +212,14 @@ class RussianRouletteGame:
         self.bullet_position = random.randint(0, 5)
         self.current_chamber = 0
         self.game_active = False
-        
+
     def get_status_embed(self):
         embed = discord.Embed(
             title="Russian Roulette",
             description="The tension rises as the cylinder spins...",
             color=discord.Color.red()
         )
-        
+
         if not self.game_active and not self.players:
             embed.add_field(name="Status", value="Waiting for players to join...", inline=False)
         elif not self.game_active and self.players:
@@ -207,12 +227,12 @@ class RussianRouletteGame:
             embed.add_field(name="Players Joined", value=players_list, inline=False)
             embed.add_field(name="Status", value="Waiting for more players or game start", inline=False)
         else:
-            players_list = "\n".join([f"• {player.mention}" + (" 🎯" if i == self.current_player_index else "") 
-                                    for i, player in enumerate(self.players)])
+            players_list = "\n".join([f"• {player.mention}" + (" 🎯" if i == self.current_player_index else "")
+                                      for i, player in enumerate(self.players)])
             embed.add_field(name="Players", value=players_list, inline=False)
             embed.add_field(name="Chamber", value=f"{self.current_chamber + 1}/6", inline=True)
             embed.add_field(name="Current Turn", value=self.players[self.current_player_index].mention, inline=True)
-            
+
         return embed
 
 class RussianRouletteButtons(discord.ui.View):
@@ -228,11 +248,11 @@ class RussianRouletteButtons(discord.ui.View):
     async def join_game(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user not in self.game.players:
             self.game.players.append(interaction.user)
-            
+
             if len(self.game.players) >= 2:
                 self.children[0].disabled = True
                 self.children[1].disabled = False
-            
+
             await self.update_message(interaction)
             await interaction.response.defer()
 
@@ -243,7 +263,7 @@ class RussianRouletteButtons(discord.ui.View):
             random.shuffle(self.game.players)
             button.disabled = True
             self.children[2].disabled = False
-            
+
             await self.update_message(interaction)
             await interaction.response.defer()
 
@@ -256,7 +276,7 @@ class RussianRouletteButtons(discord.ui.View):
         if self.game.current_chamber == self.game.bullet_position:
             eliminated_player = self.game.players.pop(self.game.current_player_index)
             self.game.current_player_index %= len(self.game.players)
-            
+
             if len(self.game.players) == 1:
                 self.game.game_active = False
                 button.disabled = True
@@ -272,7 +292,7 @@ class RussianRouletteButtons(discord.ui.View):
         else:
             self.game.current_chamber = (self.game.current_chamber + 1) % 6
             self.game.current_player_index = (self.game.current_player_index + 1) % len(self.game.players)
-        
+
         await self.update_message(interaction)
         await interaction.response.defer()
 
@@ -280,6 +300,12 @@ class RussianRouletteButtons(discord.ui.View):
 async def russ(ctx):
     view = RussianRouletteButtons()
     await ctx.send(embed=view.game.get_status_embed(), view=view)
+
+# AI command
+@bot.command()
+async def ai(ctx, *, prompt: str):
+    response = get_gemini_response(prompt)
+    await ctx.send(response)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
