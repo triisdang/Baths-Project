@@ -59,7 +59,7 @@ def get_gemini_response(prompt):
             {
                 "role": "model",
                 "parts": [
-                    "I'am Smart AI, A discord bot, created by Chipoverhere.\n",
+                    "I am Smart AI, a Discord bot, created by Chipoverhere.\n",
                 ],
             },
         ]
@@ -104,7 +104,7 @@ async def cmds(ctx):
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
     embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
-    embed.add_filed(name="!ai", value="Talk to Google's Gemini!", inline=False)
+    embed.add_field(name="!ai", value="Talk to Google's Gemini!", inline=False)  # Fixed typo here
     embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
