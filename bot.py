@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import os
+from time import sleep
 from random import randint, shuffle  # Change to specific import
 import requests
 import json
@@ -346,6 +347,42 @@ async def random(ctx):
     print(f'{ctx.author} just executed the random command.')
     response = get_groq_response("Give me a random word. NO YAPPING")
     await ctx.send(response)
+
+# Mega PING with confirmation
+class MegaPingConfirmation(discord.ui.View):
+    def __init__(self, ctx, member):
+        super().__init__(timeout=30)
+        self.ctx = ctx
+        self.member = member
+
+    @discord.ui.button(label="Are you sure, this will kill their device 💀💀", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.name == "chipoverhere":
+            await interaction.response.send_message("Initiating mega ping...")
+            for _ in range(100):
+                await self.ctx.send(self.member.mention)
+        else:
+            await interaction.response.send_message("You don't have permission to use this command!", ephemeral=True)
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Mega ping cancelled!", ephemeral=True)
+        self.stop()
+
+@bot.command()
+async def megaping(ctx, member: discord.Member):
+    if ctx.author.name == "chipoverhere":
+        print(f'{ctx.author} initiated megaping confirmation for {member}') 
+        embed = discord.Embed(
+            title="⚠️ Mega Ping Confirmation",
+            description=f"Are you sure you want to mega ping {member.mention}?",
+            color=discord.Color.red()
+        )
+        view = MegaPingConfirmation(ctx, member)
+        await ctx.send(embed=embed, view=view)
+    else:
+        await ctx.send("bro think bro is chipoverhere 😂😂😂😂😂")
 
 # Run the bot using the token you copied earlier
 bot.run(token)
