@@ -360,7 +360,7 @@ class MegaPingConfirmation(discord.ui.View):
         if interaction.user.name == "chipoverhere":
             await interaction.response.send_message("Initiating mega ping...")
             for _ in range(100):
-                await self.ctx.send(self.member.mention)
+                await self.ctx.send(self.member.mention, self.member.mention, self.member.mention, self.member.mention)
         else:
             await interaction.response.send_message("You don't have permission to use this command!", ephemeral=True)
         self.stop()
