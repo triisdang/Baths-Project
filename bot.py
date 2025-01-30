@@ -7,7 +7,7 @@ import json
 
 # Read the token from the file
 with open("token.txt", "r") as file:
-    token = file.read().strip()  # replace content in file token.txt with your own token
+    token = file.read().strip()  # Replace content in file token.txt with your own token
 
 # Read the Groq API key from the file
 with open("groqtoken.txt", "r") as file:
@@ -51,7 +51,7 @@ def get_groq_response(prompt):
 # When the bot is ready
 @bot.event
 async def on_ready():
-    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")   
+    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f'I am ready! My name is {bot.user}!')
 
@@ -89,7 +89,7 @@ async def cmds(ctx):
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
     embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
-    embed.add_field(name="!ai", value="Talk to Google's Gemini!", inline=False)
+    embed.add_field(name="!ai", value="Talk to Groq's API!", inline=False)
     embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     await ctx.send(embed=embed)
 
@@ -169,12 +169,6 @@ async def changestate(ctx, status: str, activity_type: str, *, activity_name: st
         await ctx.send(f"Changed status to {status} and activity to {activity_type} {activity_name}.")
     else:
         await ctx.send("You do not have permission to use this command.")
-
-# Example usage:
-# !changestate online game Minecraft
-# !changestate idle listening Spotify
-# !changestate dnd watching a movie
-# !changestate invisible streaming Live Coding https://twitch.tv/yourchannel
 
 # Command to join a voice channel
 @bot.command()
@@ -282,7 +276,7 @@ class RussianRouletteButtons(discord.ui.View):
             await self.update_message(interaction)
             await interaction.response.defer()
 
-    @discord.ui.button(label="Pull Trigger:skull:", style=discord.ButtonStyle.danger, disabled=True)
+    @discord.ui.button(label="Pull Trigger💀", style=discord.ButtonStyle.danger, disabled=True)
     async def pull_trigger(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.game.game_active or interaction.user != self.game.players[self.game.current_player_index]:
             await interaction.response.send_message("It's not your turn!", ephemeral=True)
@@ -297,7 +291,7 @@ class RussianRouletteButtons(discord.ui.View):
                 button.disabled = True
                 winner_embed = discord.Embed(
                     title=f"🎉 Game Over!, Call 911 {alert}",
-                    description=f"{self.game.players[0].mention} has won the game{doggokek}! {eliminated_player.mention} died! {fling}",
+                    description=f"{self.game.players[0].mention} has won the game{doggokek}! {eliminated_player.mention} died (Bro IS NOT gi-hun💀){fling}",
                     color=discord.Color.green()
                 )
                 await interaction.message.edit(embed=winner_embed, view=None)
@@ -339,7 +333,7 @@ async def funuser(ctx, member: discord.Member):
         )
         await ctx.send(embed=embed)
     else:
-        response = get_groq_response("Make this user name funny(please cook the name into some thing really funny and meme. also, be mean too.): " + member.display_name)
+        response = get_groq_response("Make this user name funny (please cook the name into something really funny and meme. also, be mean too.): " + member.display_name)
         # Split the response into chunks of 2000 characters
         for i in range(0, len(response), 2000):
             await ctx.send(response[i:i+2000])
