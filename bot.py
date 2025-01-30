@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import os
-import random
+from random import randint, shuffle  # Change to specific import
 import requests
 import json
 
@@ -21,6 +21,7 @@ cutecat = "<:cutecat:1334142840871325777>"
 catjam = "<:catjam:1334142860236161135>"
 bleh = "<:bleh:1322913813418475622>"
 meloncat = "<:meloncat:1322913721697177610>"
+alert = "<a:alert:1334142774035087423>"  # Ensure alert emoji is defined
 
 # Set up the bot with the necessary intents
 intents = discord.Intents.default()
@@ -218,7 +219,7 @@ class RussianRouletteGame:
     def __init__(self):
         self.players = []
         self.current_player_index = 0
-        self.bullet_position = random.randint(0, 5)
+        self.bullet_position = randint(0, 5)  # Use randint directly
         self.current_chamber = 0
         self.game_active = False
 
@@ -269,7 +270,7 @@ class RussianRouletteButtons(discord.ui.View):
     async def start_game(self, interaction: discord.Interaction, button: discord.ui.Button):
         if len(self.game.players) >= 2:
             self.game.game_active = True
-            random.shuffle(self.game.players)
+            shuffle(self.game.players)  # Use shuffle directly
             button.disabled = True
             self.children[2].disabled = False
 
@@ -338,6 +339,13 @@ async def funuser(ctx, member: discord.Member):
         for i in range(0, len(response), 2000):
             await ctx.send(response[i:i+2000])
         await ctx.send("Requested by " + ctx.author.mention)
+
+# A command to get a random word
+@bot.command()
+async def random(ctx):
+    print(f'{ctx.author} just executed the random command.')
+    response = get_groq_response("Give me a random word. NO YAPPING")
+    await ctx.send(response)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
