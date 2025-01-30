@@ -181,10 +181,19 @@ async def leave(ctx):
     await ctx.voice_client.disconnect()
     await ctx.send("Disconnected from the voice channel.")
 
-@bot.command()
-async def russianrualte(ctx):
-    await ctx.send("OwO")
+# Russian Roulette command 
+class RussianRouletteButton(discord.ui.View):
+    @discord.ui.button(label="Pull the Trigger", style=discord.ButtonStyle.danger)
+    async def pull_trigger(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if random.randint(1, 6) == 1:
+            await interaction.response.send_message(f"{interaction.user.mention} pulled the trigger and lost! 💀 "+ filng)
+        else:
+            await interaction.response.send_message(f"{interaction.user.mention} pulled the trigger and survived! 🎉")
 
+@bot.command()
+async def russ(ctx):
+    view = RussianRouletteButton()
+    await ctx.send("Russian Roulette: Click the button to pull the trigger!", view=view)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
