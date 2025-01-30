@@ -2,24 +2,18 @@ import discord
 from discord.ext import commands
 import os
 import random
-import requests
-import google.generativeai as genai
+import openai
 
 # Read the token from the file
 with open("token.txt", "r") as file:
-    token = file.read().strip()  # Replace content in file token.txt with your own token
+    token = file.read().strip()  # replace content in file token.txt with your own token
 
-# Read the Google Gemini API key from the file
-with open("tokengemini.txt", "r") as file:
-    gemini_api_key = file.read().strip()
-
-# Configure the Google Gemini API
-genai.configure(api_key=gemini_api_key)
+# Read the OpenRouter API key from the file
+with open("opntoken.txt", "r") as file:
+    openrouter_api_key = file.read().strip()
 
 # Pair emojis
-yeah = "<a:animeahhhhh:1334142756934651927>"
-alert = "<a:alert:1334142774035087423>"
-fling = "<a:fling:1334142789788897352>"
+fling = "<:fling:1334142789788897352>"
 ooooo = "<:ooooo:1334142810986774620>"
 doggokek = "<:doggokek:1334142827050831944>"
 cutecat = "<:cutecat:1334142840871325777>"
@@ -33,37 +27,33 @@ intents.message_content = True  # Enable the message content intent
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Dictionary to store chat histories
-chat_histories = {}
+# Configure the OpenRouter API
+client = openai.OpenAI(
+    base_url="hhttps://openrouter.ai/api/v1",
+    api_key=openrouter_api_key,
+)
 
-# Function to interact with Google Gemini API
-def get_gemini_response(user_id, prompt):
-    generation_config = {
-        "temperature": 1,
-        "top_p": 0.95,
-        "top_k": 40,
-        "max_output_tokens": 8192,
-        "response_mime_type": "text/plain",
-    }
-
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-pro",
-        generation_config=generation_config,
+# Function to interact with OpenRouter API
+def get_openrouter_response(prompt):
+    completion = client.chat.completions.create(
+        extra_headers={
+            "HTTP-Referer": "https://your-site-url.com",  # Optional. Replace with your site URL.
+            "X-Title": "Your Site Name",  # Optional. Replace with your site name.
+        },
+        model="google/gemini-2.0-flash-thinking-exp:free",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
     )
-
-    # Get the chat history for the user
-    history = chat_histories.get(user_id, [])
-
-    chat_session = model.start_chat(history=history)
-
-    response = chat_session.send_message(prompt)
-
-    # Update the chat history
-    history.append({"role": "user", "parts": [prompt]})
-    history.append({"role": "model", "parts": [response.text]})
-    chat_histories[user_id] = history
-
-    return response.text
+    return completion.choices[0].message.content
 
 # When the bot is ready
 @bot.event
@@ -339,10 +329,28 @@ async def russ(ctx):
 @bot.command()
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
-    response = get_gemini_response(ctx.author.id, prompt)
+    response = get_openrouter_response(prompt)
     # Split the response into chunks of 2000 characters
     for i in range(0, len(response), 2000):
         await ctx.send(response[i:i+2000])
+
+# A command that makes fun of a user's name
+@bot.command()
+async def funuser(ctx, member: discord.Member):
+    print(f'{ctx.author} just executed the funuser command.')
+    if member is None:
+        embed = discord.Embed(
+            title="Missing Argument",
+            description="Please tag a user to make fun of.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed)
+    else:
+        response = get_openrouter_response("Make this user name funny: " + member.display_name)
+        # Split the response into chunks of 2000 characters
+        for i in range(0, len(response), 2000):
+            await ctx.send(response[i:i+2000])
+        await ctx.send("Requested by " + ctx.author.mention)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
