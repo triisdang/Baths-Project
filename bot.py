@@ -16,10 +16,10 @@ with open("groqtoken.txt", "r") as file:
 
 # Pair emojis
 fling = "<a:fling:1334142789788897352>"
-ooooo = "<:ooooo:1334142810986774620>"
-doggokek = "<:doggokek:1334142827050831944>"
+ooooo = "<a:ooooo:1334142810986774620>"
+doggokek = "<a:doggokek:1334142827050831944>"
 cutecat = "<:cutecat:1334142840871325777>"
-catjam = "<:catjam:1334142860236161135>"
+catjam = "<a:catjam:1334142860236161135>"
 bleh = "<:bleh:1322913813418475622>"
 meloncat = "<:meloncat:1322913721697177610>"
 alert = "<a:alert:1334142774035087423>"  # Ensure alert emoji is defined
@@ -92,7 +92,11 @@ async def cmds(ctx):
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
     embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
     embed.add_field(name="!ai", value="Talk to Groq's API!", inline=False)
+    embed.add_field(name="!funuser", value="Make fun of a user's name!", inline=False)
+    embed.add_field(name="!random", value="Get a random word!", inline=False)
+    embed.add_field(name="!invite", value="Invite the bot to your server!", inline=False)
     embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
+    embed.set_thumbnail(url=bot.user.avatar.url)
     await ctx.send(embed=embed)
 
 # A command that steals social credit
@@ -384,6 +388,18 @@ async def megaping(ctx, member: discord.Member):
         await ctx.send(embed=embed, view=view)
     else:
         await ctx.send("bro think bro is chipoverhere 😂😂😂😂😂")
+
+@bot.command()
+async def invite(ctx):
+        print(f'{ctx.author} just executed the invite command.')
+        embed = discord.Embed(
+            title="Invite Me!",
+            description="Invite me to your server by clicking the link below:",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="Invite Link", value="[Invite Link](https://bathsbot.vercel.app/)", inline=False)
+    
+        await ctx.send(embed=embed)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
