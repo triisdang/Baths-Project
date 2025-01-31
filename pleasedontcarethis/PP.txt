@@ -1,0 +1,32 @@
+Privacy Policy
+
+1. Data Collection
+- We collect Discord usernames and IDs
+- Command usage is logged for monitoring
+- Message content for AI commands is processed
+- No personal information is permanently stored
+
+2. Data Usage
+- Improve bot functionality and features
+- Monitor command usage patterns
+- Process AI command requests
+- Maintain bot security
+
+3. Data Sharing
+- AI prompts are sent to Groq API
+- No data is sold to third parties
+- Command outputs are visible in Discord channels
+- Logs are accessible only to bot owner
+
+4. User Rights
+- Request data deletion
+- Report privacy concerns
+- Opt-out of optional features
+- Contact bot owner for inquiries
+
+5. Contact Information
+- Discord: chipoverhere
+- GitHub: github.com/triisdang/DSBOT
+- Report issues through Discord or GitHub
+
+Last Updated: 2024

@@ -1,0 +1,30 @@
+Terms of Service
+
+1. Basic Usage Rules
+- Users must follow Discord's Terms of Service
+- Do not spam or abuse bot commands
+- Respect other users and server rules
+- Commands should be used as intended
+
+2. User Responsibilities
+- Users are responsible for their inputs to AI commands
+- Users must not use bot for harassment or harmful purposes
+- Report any bugs or issues to bot owner
+
+3. AI Content Disclaimer
+- AI responses are generated using Groq API
+- Content may be inaccurate or inappropriate
+- Bot owner is not responsible for AI-generated content
+- AI responses may be monitored for quality
+
+4. Bot Owner Rights
+- Services may be modified without notice
+- Access may be revoked for policy violations
+- Features may change or become unavailable
+- Bot may be temporarily offline for maintenance
+
+5. Liability Limitations
+- Bot is provided "as is" without warranty
+- No guarantee of service availability
+- Not liable for data loss or damages
+- Not responsible for misuse of commands
