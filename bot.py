@@ -278,6 +278,7 @@ async def on_ready():
     activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f'I am ready! My name is {bot.user}!')
+    print("This bot by Chipoverhere on discord, triisdang on github. Please dont revome this message.")
 
 #########################
 #  MODERATION COMMANDS  #
