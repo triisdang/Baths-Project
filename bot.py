@@ -164,6 +164,9 @@ async def on_message(message):
         
         if len(response) > 2000:
             await send_long_message(message.channel, response[2000:], title="Continued...")
+@on_message
+    async def on_message(message):
+        print(f'{message.author} sent: {message.content} to the bot lol what is he doing')
 
 #
 #
