@@ -31,6 +31,7 @@ intents.message_content = True  # Enable the message content intent
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 dm_history = {}  # Dictionary to store DM history {user_id: [(timestamp, content)]}
+allowdmai = "true"  # Initialize allowdmai at top level
 
 # Constants
 COMMAND_PREFIX = "!"
@@ -128,7 +129,6 @@ async def on_ready():
 # Define allowdmai at the top level
 allowdmai = "true"
 
-# Add after intents setup and before bot commands 
 @bot.event
 async def on_message(message):
     # First process commands regardless of message type
@@ -164,9 +164,6 @@ async def on_message(message):
         
         if len(response) > 2000:
             await send_long_message(message.channel, response[2000:], title="Continued...")
-@on_message
-    async def on_message(message):
-        print(f'{message.author} sent: {message.content} to the bot lol what is he doing')
 
 #
 #
