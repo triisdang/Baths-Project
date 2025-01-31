@@ -74,6 +74,41 @@ def get_groq_response(prompt, user_id=None):
         print(f"API Error: {e}")
         return "Sorry, I encountered an error while processing your request."
 
+# Add helper function for creating embeds
+def create_embed(title, description=None, color=discord.Color.green(), author=None, footer=None, thumbnail=None):
+    embed = discord.Embed(title=title, description=description, color=color)
+    if author:
+        embed.set_author(name=f"Requested by: {author.display_name}", icon_url=author.avatar.url)
+    if footer:
+        embed.set_footer(text=footer)
+    if thumbnail:
+        embed.set_thumbnail(url=thumbnail)
+    return embed
+
+# Modify AI response handling
+async def send_long_message(ctx, content, title="AI Response", split_size=1024):
+    remaining = content
+    first = True
+    
+    while remaining:
+        current = remaining[:split_size]
+        remaining = remaining[split_size:]
+        
+        if first:
+            embed = create_embed(
+                title=title,
+                description=current,
+                author=ctx.author
+            )
+            first = False
+        else:
+            embed = create_embed(
+                title="Continued...",
+                description=current
+            )
+            
+        await ctx.send(embed=embed)
+
 #
 #
 #
@@ -120,7 +155,18 @@ async def on_message(message):
                 dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
 
             # Send response
-            await message.channel.send(response)
+            embed = create_embed(
+                title="AI Response",
+                description=response[:2000],
+                author=message.author,
+                footer="Note: DMs are logged and viewable by the bot owner."
+            )
+            await message.channel.send(embed=embed)
+            
+            # Send additional chunks if needed
+            if len(response) > 2000:
+                await send_long_message(message.channel, response[2000:], title="Continued...")
+
             print(f'AI response to {message.author} (ID: {message.author.id}): {response[:100]}...')
 
             # Process commands after handling DM
@@ -180,7 +226,12 @@ async def senddm(ctx, user_id: int, *, message: str):
 @bot.command()
 async def hello(ctx):
     print(f'{ctx.author} just executed the hello command.')
-    await ctx.send("Hello cc! " + meloncat)
+    embed = create_embed(
+        title="Hello!",
+        description=f"Hello cc! {meloncat}",
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
 
 # A command that displays server information
 @bot.command()
@@ -454,9 +505,7 @@ async def russ(ctx):
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
     response = get_groq_response(prompt)
-    # Split the response into chunks of 2000 characters
-    for i in range(0, len(response), 2000):
-        await ctx.send(response[i:i+2000])
+    await send_long_message(ctx, response)
 
 # A command that makes fun of a user's name
 @bot.command()
@@ -481,7 +530,12 @@ async def funuser(ctx, member: discord.Member):
 async def random(ctx):
     print(f'{ctx.author} just executed the random command.')
     response = get_groq_response("Give me a random word. NO YAPPING")
-    await ctx.send(response)
+    embed = create_embed(
+        title="Random Word",
+        description=response,
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
 
 # Mega PING with confirmation
 class MegaPingConfirmation(discord.ui.View):
@@ -508,17 +562,19 @@ class MegaPingConfirmation(discord.ui.View):
 
 @bot.command()
 async def megaping(ctx, member: discord.Member):
-    if ctx.author.name == "chipoverhere":
-        print(f'{ctx.author} initiated megaping confirmation for {member}') 
-        embed = discord.Embed(
-            title="⚠️ Mega Ping Confirmation",
-            description=f"Are you sure you want to mega ping {member.mention}?",
-            color=discord.Color.red()
-        )
-        view = MegaPingConfirmation(ctx, member)
-        await ctx.send(embed=embed, view=view)
-    else:
-        await ctx.send("bro think bro is chipoverhere 😂😂😂😂😂")
+    if ctx.author.name != "chipoverhere":
+        await send_permission_denied(ctx)
+        return
+    
+    print(f'{ctx.author} initiated megaping confirmation for {member}')
+    embed = create_embed(
+        title="⚠️ Mega Ping Confirmation",
+        description=f"Are you sure you want to mega ping {member.mention}?",
+        color=discord.Color.red(),
+        author=ctx.author
+    )
+    view = MegaPingConfirmation(ctx, member)
+    await ctx.send(embed=embed, view=view)
 
 @bot.command()
 async def invite(ctx):
@@ -562,6 +618,26 @@ async def dmhistory(ctx, user_id: int = None):
         await ctx.send(embed=embed)
     except Exception as e:
         await ctx.send(f"Error retrieving DM history: {e}")
+
+# Update error responses
+async def send_error(ctx, message):
+    embed = create_embed(
+        title="Error",
+        description=message,
+        color=discord.Color.red(),
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
+
+# Update permission denied responses
+async def send_permission_denied(ctx):
+    embed = create_embed(
+        title="Permission Denied",
+        description="You don't have permission to use this command!",
+        color=discord.Color.red(),
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
