@@ -189,7 +189,10 @@ async def on_message(message):
     
     # Only print for DM messages
     if isinstance(message.channel, discord.DMChannel):
-        print(f"DM from {message.author}: {message.content}")
+        if message.author == bot.user:
+            uselessvarneverusethis = ["I'm sorry, I can't do that.", "I'm sorry, Dave. I'm afraid I can't do that.", "I'm sorry, I can't do that. I'm just a bot."]
+        else:
+            print(f"DM from {message.author}: {message.content}")
     
     # Handle DM AI responses if enabled
     if allowdmai == "true" and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
