@@ -2,9 +2,48 @@ import discord
 from discord.ext import commands
 import os
 from datetime import datetime
+import asyncio
 from random import randint, shuffle
 import requests
 import json
+from typing import Optional
+
+# Constants
+COMMAND_PREFIX = "!"
+MAX_DM_HISTORY = 50
+API_TIMEOUT = 30
+BOMB_COOLDOWN = 300  # 5 minutes cooldown
+BOMB_RATE_LIMIT = 0.5  # 0.5 seconds between messages
+MAX_BOMB_MESSAGES = 100
+
+# Bot setup
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+
+# Global variables
+dm_history = {}
+allowdmai = "true"
+dm_cooldowns = {}
+
+# Add helper for cooldown checking
+async def check_cooldown(user_id: int) -> tuple[bool, int]:
+    if user_id in dm_cooldowns:
+        remaining = dm_cooldowns[user_id] - datetime.now().timestamp()
+        if remaining > 0:
+            return False, int(remaining)
+    return True, 0
+
+# Add rate limiter for DMs
+class DMRateLimiter:
+    def __init__(self):
+        self.last_dm = 0
+    
+    async def wait(self):
+        now = datetime.now().timestamp()
+        if now - self.last_dm < BOMB_RATE_LIMIT:
+            await asyncio.sleep(BOMB_RATE_LIMIT)
+        self.last_dm = now
 
 # Read the token from the file
 with open("token.txt", "r") as file:
@@ -32,11 +71,6 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 dm_history = {}  # Dictionary to store DM history {user_id: [(timestamp, content)]}
 allowdmai = "true"  # Initialize allowdmai at top level
-
-# Constants
-COMMAND_PREFIX = "!"
-MAX_DM_HISTORY = 50
-API_TIMEOUT = 30
 
 # Helper Functions
 def get_groq_response(prompt, user_id=None):
@@ -703,6 +737,93 @@ async def viewdm(ctx, user_id: int):
         
     except Exception as e:
         await send_error(ctx, f"Error retrieving DMs: {str(e)}")
+
+
+
+class DMBomber(discord.ui.View):
+    def __init__(self, ctx, user_id: int):
+        super().__init__(timeout=30)
+        self.ctx = ctx
+        self.user_id = user_id
+        self.rate_limiter = DMRateLimiter()
+
+    @discord.ui.button(label="START BOMBING 💣", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.name != "chipoverhere":
+            await interaction.response.send_message("Nice try! But you don't have permission.", ephemeral=True)
+            return
+
+        can_send, wait_time = await check_cooldown(self.user_id)
+        if not can_send:
+            await interaction.response.send_message(
+                f"Target is on cooldown. Try again in {wait_time} seconds.", 
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_message("Starting bomb...", ephemeral=True)
+        
+        try:
+            user = await bot.fetch_user(self.user_id)
+            dm_cooldowns[self.user_id] = datetime.now().timestamp() + BOMB_COOLDOWN
+            
+            for i in range(MAX_BOMB_MESSAGES):
+                try:
+                    await self.rate_limiter.wait()
+                    embed = create_embed(
+                        title="💣 BOOM!",
+                        description=f"Message {i+1}/{MAX_BOMB_MESSAGES}",
+                        color=discord.Color.red()
+                    )
+                    await user.send(embed=embed)
+                except discord.Forbidden:
+                    await interaction.followup.send(
+                        embed=create_embed(
+                            title="Error",
+                            description="Cannot send DMs to this user!",
+                            color=discord.Color.red()
+                        ),
+                        ephemeral=True
+                    )
+                    break
+                except Exception as e:
+                    print(f"Error in bomb command: {e}")
+                    break
+                    
+        except Exception as e:
+            await send_error(interaction, f"Failed to bomb user: {str(e)}")
+        finally:
+            self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(
+            embed=create_embed(
+                title="Cancelled",
+                description="Bombing cancelled",
+                color=discord.Color.green()
+            ),
+            ephemeral=True
+        )
+        self.stop()
+
+# Update bomb command
+@bot.command()
+async def bomb(ctx, user_id: int):
+    if ctx.author.name != "chipoverhere":
+        await send_permission_denied(ctx)
+        return
+        
+    embed = create_embed(
+        title="💣 Bomb Confirmation",
+        description=f"Are you sure you want to bomb user {user_id}?",
+        color=discord.Color.red(),
+        author=ctx.author,
+        footer="⚠️ This action has a 5-minute cooldown"
+    )
+    
+    view = DMBomber(ctx, user_id)
+    await ctx.send(embed=embed, view=view, ephemeral=True)
 
 # Run the bot using the token you copied earlier
 bot.run(token)
