@@ -286,18 +286,21 @@ async def on_ready():
 
 @bot.command()
 async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    # Check if user has ban permissions
-    if ctx.author.name != "chipoverhere":
+    # Check if user is dev first
+    if not is_dev(ctx.author.name):
         embed = Embeds.create_base(
-        title="I know but!...",
-        description="I'm sorry",
-        color=discord.Color.red(),
-        author=ctx.author
-    )
-    embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
-    await ctx.send(embed=embed)
+            title="I know but!...",
+            description="I'm sorry",
+            color=discord.Color.red(),
+            author=ctx.author
+        )
+        embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
+        await ctx.send(embed=embed)
+        return
+        
+    # Check ban permissions after dev check
     if not ctx.author.guild_permissions.ban_members:
-        await Embeds.permission_denied(ctx)
+        await Embeds.error(ctx, "Error", "You need ban permissions to use this command!")
         return
         
     # Check if bot has ban permissions
@@ -322,7 +325,7 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
         embed.add_field(name="Banned by", value=ctx.author.mention, inline=True)
         embed.add_field(name="User ID", value=member.id, inline=True)
         
-        # Send DM to user being banned
+        # Try to DM the user
         try:
             dm_embed = Embeds.create_base(
                 title="You've been banned!",
@@ -626,8 +629,8 @@ async def debugcmds(ctx):
         embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
         embed.add_field(name="!senddm", value="Send DM to a user.(userid)", inline=False)
         embed.add_field(name="!allowdmai", value="True/False, Use for letting the user use ai in DMs", inline=False)
-        embed.add_field(name="!dmhistory", value="View DM bot with user(userid)", inline=False)
-        embed.add_field(name="!viewdm", value="Don't use this for now.", inline=False)
+        embed.add_field(name="!viewdm", value="View DM bot with user(userid)", inline=False)
+        embed.add_field(name="!dmhistory", value="Don't use this for now.", inline=False)
         embed.add_field(name="More coming soon...", value="soon.", inline=False)
         embed.add_field(name=f"TROLL COMMANDS", value=f"TROLL {EMOJIS['trollhand']} ", inline=False)
         embed.add_field(name="!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
