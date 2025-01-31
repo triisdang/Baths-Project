@@ -90,39 +90,44 @@ async def on_ready():
     print(f'I am ready! My name is {bot.user}!')
 
 
+# Define allowdmai at the top level
+allowdmai = "true"
+
 # Add after intents setup and before bot commands 
 @bot.event
 async def on_message(message):
     # Only process DMs and ignore self messages
-    if isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
-        user_id = message.author.id
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if allowdmai == "true":
+        if isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
+            user_id = message.author.id
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Initialize user history if not exists
-        if user_id not in dm_history:
-            dm_history[user_id] = []
-            # Send privacy notice only once when starting new conversation
-            await message.channel.send("-# ⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
-        
-        # Get AI response
-        response = get_groq_response(message.content, user_id)
-        
-        # Log the conversation
-        dm_history[user_id].append((timestamp, "User", message.content))
-        dm_history[user_id].append((timestamp, "AI", response))
-        
-        # Maintain history limit
-        if len(dm_history[user_id]) > MAX_DM_HISTORY:
-            dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
-        
-        # Send response
-        await message.channel.send(response)
-        print(f'AI response to {message.author} (ID: {message.author.id}): {response[:100]}...')
-    
-    # Process commands after handling DM
-    await bot.process_commands(message)
-#
-#
+            # Initialize user history if not exists
+            if user_id not in dm_history:
+                dm_history[user_id] = []
+                # Send privacy notice only once when starting new conversation 
+                await message.channel.send("⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
+
+            # Get AI response
+            response = get_groq_response(message.content, user_id)
+
+            # Log the conversation
+            dm_history[user_id].append((timestamp, "User", message.content))
+            dm_history[user_id].append((timestamp, "AI", response))
+
+            # Maintain history limit
+            if len(dm_history[user_id]) > MAX_DM_HISTORY:
+                dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
+
+            # Send response
+            await message.channel.send(response)
+            print(f'AI response to {message.author} (ID: {message.author.id}): {response[:100]}...')
+
+            # Process commands after handling DM
+            await bot.process_commands(message)
+    else:
+        # Process commands for non-DM messages
+        uselessvar = "true"
 #
 #
 #
@@ -131,6 +136,46 @@ async def on_message(message):
 #
 #
 #
+
+# Command to toggle DM AI
+@bot.command()
+async def allowdmai(ctx, value: str):
+    global allowdmai
+    print(f'{ctx.author} just executed the allowdmai command.')
+    if ctx.author.name == "chipoverhere":
+        if value.lower() == "true":
+            allowdmai = "true"
+            await ctx.send("AI responses to DMs have been enabled.")
+        elif value.lower() == "false":
+            allowdmai = "false"
+            await ctx.send("AI responses to DMs have been disabled.")
+        else:
+            await ctx.send("Invalid value. Please use `true` or `false`.")
+    else:
+        await ctx.send("You don't have permission to use this command!")
+
+
+# Command to send DM using user ID
+@bot.command()
+async def senddm(ctx, user_id: int, *, message: str):
+    if ctx.author.name != "chipoverhere":
+        await ctx.send("You don't have permission to use this command!")
+        return
+    
+    try:
+        user = await bot.fetch_user(user_id)
+        if user:
+            await user.send(message)
+            await ctx.send(f"Message sent to {user.name}#{user.discriminator} ({user_id})")
+            print(f"{ctx.author} sent DM to {user.name} ({user_id}): {message}")
+        else:
+            await ctx.send("User not found!")
+    except discord.Forbidden:
+        await ctx.send("Cannot send DM to this user!")
+    except Exception as e:
+        await ctx.send(f"Error: {str(e)}")
+
+
 # Test command
 @bot.command()
 async def hello(ctx):
