@@ -110,6 +110,25 @@ async def send_long_message(ctx, content, title="AI Response", split_size=1024):
             
         await ctx.send(embed=embed)
 
+# Add new helper functions for common embed responses
+async def send_success(ctx, title, description):
+    embed = create_embed(
+        title=title,
+        description=description,
+        color=discord.Color.green(),
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
+
+async def send_warning(ctx, title, description):
+    embed = create_embed(
+        title=f"⚠️ {title}",
+        description=description,
+        color=discord.Color.gold(),
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
+
 #
 #
 #
@@ -146,7 +165,13 @@ async def on_message(message):
         # Initialize user history if not exists
         if user_id not in dm_history:
             dm_history[user_id] = []
-            await message.channel.send("-# ⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
+            embed = create_embed(
+                title="⚠️ Privacy Notice",
+                description="-# By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.",
+                color=discord.Color.gold(),
+                author=message.author
+            )
+            await message.channel.send(embed=embed)
 
         # Get AI response and handle it
         response = get_groq_response(message.content, user_id)
@@ -186,35 +211,39 @@ async def allowdmai(ctx, value: str):
     if ctx.author.name == "chipoverhere":
         if value.lower() == "true":
             allowdmai = "true"
-            await ctx.send("AI responses to DMs have been enabled.")
+            await send_success(ctx, "AI DM Settings", "AI responses to DMs have been enabled.")
         elif value.lower() == "false":
             allowdmai = "false"
-            await ctx.send("AI responses to DMs have been disabled.")
+            await send_success(ctx, "AI DM Settings", "AI responses to DMs have been disabled.")
         else:
-            await ctx.send("Invalid value. Please use `true` or `false`.")
+            await send_error(ctx, "Invalid value. Please use `true` or `false`.")
     else:
-        await ctx.send("You don't have permission to use this command!")
+        await send_permission_denied(ctx)
 
 
 # Command to send DM using user ID
 @bot.command()
 async def senddm(ctx, user_id: int, *, message: str):
     if ctx.author.name != "chipoverhere":
-        await ctx.send("You don't have permission to use this command!")
+        await send_permission_denied(ctx)
         return
     
     try:
         user = await bot.fetch_user(user_id)
         if user:
             await user.send(message)
-            await ctx.send(f"Message sent to {user.name}#{user.discriminator} ({user_id})")
+            await send_success(
+                ctx, 
+                "DM Sent",
+                f"Message sent to {user.name}#{user.discriminator} ({user_id})"
+            )
             print(f"{ctx.author} sent DM to {user.name} ({user_id}): {message}")
         else:
-            await ctx.send("User not found!")
+            await send_error(ctx, "User Error", "User not found!")
     except discord.Forbidden:
-        await ctx.send("Cannot send DM to this user!")
+        await send_error(ctx, "Permission Error", "Cannot send DM to this user!")
     except Exception as e:
-        await ctx.send(f"Error: {str(e)}")
+        await send_error(ctx, "Error", str(e))
 
 
 # Test command
@@ -359,7 +388,7 @@ async def join(ctx):
     print(f'{ctx.author} just executed the join command.')
     # Check if the user is in a voice channel
     if ctx.author.voice is None:
-        await ctx.send("You are not in a voice channel!")
+        await send_error(ctx, "Voice Error", "You are not in a voice channel!")
         return
 
     # Get the voice channel the user is in
@@ -367,34 +396,34 @@ async def join(ctx):
 
     # Connect to the voice channel
     await channel.connect()
-    await ctx.send(f"Joined {channel.name}!")
+    await send_success(ctx, "Voice Channel", f"Joined {channel.name}!")
 
 # Command to play an MP3 file
 @bot.command()
 async def play(ctx, filename: str):
     print(f'{ctx.author} just executed the play command.')
     if ctx.voice_client is None:
-        await ctx.send("I am not in a voice channel! Use !join to make me join a voice channel first.")
+        await send_error(ctx, "Voice Error", "I am not in a voice channel! Use !join to make me join a voice channel first.")
         return
 
     if not os.path.isfile(filename):
-        await ctx.send(f"The file {filename} does not exist.")
+        await send_error(ctx, "File Error", f"The file {filename} does not exist.")
         return
 
     source = discord.FFmpegPCMAudio(filename)
     ctx.voice_client.play(source, after=lambda e: print(f"Finished playing: {e}"))
-    await ctx.send(f"Now playing: {filename}")
+    await send_success(ctx, "Now Playing", f"Playing: {filename}")
 
 # Command to leave a voice channel
 @bot.command()
 async def leave(ctx):
     print(f'{ctx.author} just executed the leave command.')
     if ctx.voice_client is None:
-        await ctx.send("I am not in a voice channel!")
+        await send_error(ctx, "Voice Error", "I am not in a voice channel!")
         return
 
     await ctx.voice_client.disconnect()
-    await ctx.send("Disconnected from the voice channel.")
+    await send_success(ctx, "Voice Channel", "Successfully disconnected from the voice channel.")
 
 # Russian Roulette command
 class RussianRouletteGame:
