@@ -8,76 +8,101 @@ import requests
 import json
 from typing import Optional
 
-# Constants
+#########################
+#       CONSTANTS       #
+#########################
+
 COMMAND_PREFIX = "!"
 MAX_DM_HISTORY = 50
 API_TIMEOUT = 30
-BOMB_COOLDOWN = 300  # 5 minutes cooldown
-BOMB_RATE_LIMIT = 0.5  # 0.5 seconds between messages
+BOMB_COOLDOWN = 300
+BOMB_RATE_LIMIT = 0.5
 MAX_BOMB_MESSAGES = 100
 
-# Bot setup
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
-
-# Global variables
-dm_history = {}
-allowdmai = "true"
-dm_cooldowns = {}
-
-# Add helper for cooldown checking
-async def check_cooldown(user_id: int) -> tuple[bool, int]:
-    if user_id in dm_cooldowns:
-        remaining = dm_cooldowns[user_id] - datetime.now().timestamp()
-        if remaining > 0:
-            return False, int(remaining)
-    return True, 0
-
-# Add rate limiter for DMs
-class DMRateLimiter:
-    def __init__(self):
-        self.last_dm = 0
-    
-    async def wait(self):
-        now = datetime.now().timestamp()
-        if now - self.last_dm < BOMB_RATE_LIMIT:
-            await asyncio.sleep(BOMB_RATE_LIMIT)
-        self.last_dm = now
-
-# Read the token from the file
+# Load tokens
 with open("token.txt", "r") as file:
-    token = file.read().strip()  # Replace content in file token.txt with your own token
+    TOKEN = file.read().strip()
 
-# Read the Groq API key from the file
 with open("groqtoken.txt", "r") as file:
-    groq_api_key = file.read().strip()
+    GROQ_API_KEY = file.read().strip()
 
-# Pair emojis
-fling = "<a:fling:1334142789788897352>"
-ooooo = "<a:ooooo:1334142810986774620>"
-doggokek = "<a:doggokek:1334142827050831944>"
-cutecat = "<:cutecat:1334142840871325777>"
-catjam = "<a:catjam:1334142860236161135>"
-bleh = "<:bleh:1322913813418475622>"
-meloncat = "<:meloncat:1322913721697177610>"
-alert = "<a:alert:1334142774035087423>"  # Ensure alert emoji is defined
+# Emojis
+EMOJIS = {
+    "fling": "<:fling:1334142789788897352>",
+    "ooooo": "<a:ooooo:1334142810986774620>",
+    "doggokek": "<a:doggokek:1334142827050831944>",
+    "cutecat": "<:cutecat:1334142840871325777>",
+    "catjam": "<a:catjam:1334142860236161135>",
+    "bleh": "<:bleh:1322913813418475622>",
+    "meloncat": "<:meloncat:1322913721697177610>",
+    "alert": "<a:alert:1334142774035087423>"
+}
 
-# Set up the bot with the necessary intents
-intents = discord.Intents.default()
-intents.message_content = True  # Enable the message content intent
+#########################
+#     EMBED HELPERS     #
+#########################
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+class Embeds:
+    @staticmethod
+    def create_base(title, description=None, color=discord.Color.green(), author=None, footer=None, thumbnail=None):
+        embed = discord.Embed(title=title, description=description, color=color)
+        if author:
+            embed.set_author(name=f"Requested by: {author.display_name}", icon_url=author.avatar.url)
+        if footer:
+            embed.set_footer(text=footer)
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
+        return embed
 
-dm_history = {}  # Dictionary to store DM history {user_id: [(timestamp, content)]}
-allowdmai = "true"  # Initialize allowdmai at top level
+    @staticmethod
+    async def error(ctx, message):
+        embed = Embeds.create_base(
+            title="Error",
+            description=message,
+            color=discord.Color.red(),
+            author=ctx.author
+        )
+        await ctx.send(embed=embed)
 
-# Helper Functions
+    @staticmethod
+    async def success(ctx, title, description):
+        embed = Embeds.create_base(
+            title=title,
+            description=description,
+            color=discord.Color.green(),
+            author=ctx.author
+        )
+        await ctx.send(embed=embed)
+
+    @staticmethod
+    async def warning(ctx, title, description):
+        embed = Embeds.create_base(
+            title=f"⚠️ {title}",
+            description=description,
+            color=discord.Color.gold(),
+            author=ctx.author
+        )
+        await ctx.send(embed=embed)
+
+    @staticmethod
+    async def permission_denied(ctx):
+        embed = Embeds.create_base(
+            title="Permission Denied",
+            description="You don't have permission to use this command!",
+            color=discord.Color.red(),
+            author=ctx.author
+        )
+        await ctx.send(embed=embed)
+
+#########################
+#    API FUNCTIONS      #
+#########################
+
 def get_groq_response(prompt, user_id=None):
     try:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {groq_api_key}",
+            "Authorization": f"Bearer {GROQ_API_KEY}",
             "Content-Type": "application/json"
         }
 
@@ -109,18 +134,40 @@ def get_groq_response(prompt, user_id=None):
         print(f"API Error: {e}")
         return "Sorry, I encountered an error while processing your request."
 
-# Add helper function for creating embeds
-def create_embed(title, description=None, color=discord.Color.green(), author=None, footer=None, thumbnail=None):
-    embed = discord.Embed(title=title, description=description, color=color)
-    if author:
-        embed.set_author(name=f"Requested by: {author.display_name}", icon_url=author.avatar.url)
-    if footer:
-        embed.set_footer(text=footer)
-    if thumbnail:
-        embed.set_thumbnail(url=thumbnail)
-    return embed
+#########################
+#      BOT SETUP        #
+#########################
 
-# Modify AI response handling
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents)
+
+# Global variables
+dm_history = {}
+allowdmai = "true"
+dm_cooldowns = {}
+
+#########################
+#   HELPER FUNCTIONS    #
+#########################
+
+async def check_cooldown(user_id: int) -> tuple[bool, int]:
+    if user_id in dm_cooldowns:
+        remaining = dm_cooldowns[user_id] - datetime.now().timestamp()
+        if remaining > 0:
+            return False, int(remaining)
+    return True, 0
+
+class DMRateLimiter:
+    def __init__(self):
+        self.last_dm = 0
+    
+    async def wait(self):
+        now = datetime.now().timestamp()
+        if now - self.last_dm < BOMB_RATE_LIMIT:
+            await asyncio.sleep(BOMB_RATE_LIMIT)
+        self.last_dm = now
+
 async def send_long_message(ctx, content, title="AI Response", split_size=1024):
     remaining = content
     first = True
@@ -130,57 +177,29 @@ async def send_long_message(ctx, content, title="AI Response", split_size=1024):
         remaining = remaining[split_size:]
         
         if first:
-            embed = create_embed(
+            embed = Embeds.create_base(
                 title=title,
                 description=current,
                 author=ctx.author
             )
             first = False
         else:
-            embed = create_embed(
+            embed = Embeds.create_base(
                 title="Continued...",
                 description=current
             )
             
         await ctx.send(embed=embed)
 
-# Add new helper functions for common embed responses
-async def send_success(ctx, title, description):
-    embed = create_embed(
-        title=title,
-        description=description,
-        color=discord.Color.green(),
-        author=ctx.author
-    )
-    await ctx.send(embed=embed)
+#########################
+#    EVENT HANDLERS     #
+#########################
 
-async def send_warning(ctx, title, description):
-    embed = create_embed(
-        title=f"⚠️ {title}",
-        description=description,
-        color=discord.Color.gold(),
-        author=ctx.author
-    )
-    await ctx.send(embed=embed)
-
-#
-#
-#
-#
-#                            EVENTS 🤖
-#
-#
-#
-# When the bot is ready
 @bot.event
 async def on_ready():
     activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f'I am ready! My name is {bot.user}!')
-
-
-# Define allowdmai at the top level
-allowdmai = "true"
 
 @bot.event
 async def on_message(message):
@@ -202,7 +221,7 @@ async def on_message(message):
         # Initialize user history if not exists
         if user_id not in dm_history:
             dm_history[user_id] = []
-            embed = create_embed(
+            embed = Embeds.create_base(
                 title="⚠️ Privacy Notice",
                 description="-# By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.",
                 color=discord.Color.gold(),
@@ -220,7 +239,7 @@ async def on_message(message):
             dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
 
         # Send response with embed
-        embed = create_embed(
+        embed = Embeds.create_base(
             title="AI Response",
             description=response[:2000],
             author=message.author,
@@ -231,201 +250,127 @@ async def on_message(message):
         if len(response) > 2000:
             await send_long_message(message.channel, response[2000:], title="Continued...")
 
-#
-#
-#
-#                         COMMANDS  🤖
-#
-#
-#
-#
+#########################
+#  MODERATION COMMANDS  #
+#########################
 
-# Command to toggle DM AI
 @bot.command()
-async def allowdmai(ctx, value: str):
-    global allowdmai
-    print(f'{ctx.author} just executed the allowdmai command.')
-    if ctx.author.name == "chipoverhere":
-        if value.lower() == "true":
-            allowdmai = "true"
-            await send_success(ctx, "AI DM Settings", "AI responses to DMs have been enabled.")
-        elif value.lower() == "false":
-            allowdmai = "false"
-            await send_success(ctx, "AI DM Settings", "AI responses to DMs have been disabled.")
-        else:
-            await send_error(ctx, "Invalid value. Please use `true` or `false`.")
-    else:
-        await send_permission_denied(ctx)
-
-
-# Command to send DM using user ID
-@bot.command()
-async def senddm(ctx, user_id: int, *, message: str):
+async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
+    # Check if user has ban permissions
     if ctx.author.name != "chipoverhere":
-        await send_permission_denied(ctx)
-        return
-    
-    try:
-        user = await bot.fetch_user(user_id)
-        if user:
-            await user.send(message)
-            await send_success(
-                ctx, 
-                "DM Sent",
-                f"Message sent to {user.name}#{user.discriminator} ({user_id})"
-            )
-            print(f"{ctx.author} sent DM to {user.name} ({user_id}): {message}")
-        else:
-            await send_error(ctx, "User Error", "User not found!")
-    except discord.Forbidden:
-        await send_error(ctx, "Permission Error", "Cannot send DM to this user!")
-    except Exception as e:
-        await send_error(ctx, "Error", str(e))
-
-
-# Test command
-@bot.command()
-async def hello(ctx):
-    print(f'{ctx.author} just executed the hello command.')
-    embed = create_embed(
-        title="Hello!",
-        description=f"Hello world! {meloncat}",
+        embed = Embeds.create_base(
+        title="I know but!...",
+        description="I'm sorry",
+        color=discord.Color.red(),
         author=ctx.author
     )
+    embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
     await ctx.send(embed=embed)
-
-# A command that displays server information
-@bot.command()
-async def whatisthisserver(ctx):
+    if not ctx.author.guild_permissions.ban_members:
+        await Embeds.permission_denied(ctx)
+        return
+        
+    # Check if bot has ban permissions
+    if not ctx.guild.me.guild_permissions.ban_members:
+        await Embeds.error(ctx, "Bot Error", "I don't have permission to ban members!")
+        return
+        
+    # Check if target is bannable
+    if not member.bannable:
+        await Embeds.error(ctx, "Error", "I cannot ban this user! They might have higher permissions than me.")
+        return
+        
     try:
-        embed = discord.Embed(
-            title=f"{ctx.guild.name} - Server Info",
-            description=f"Info of {ctx.guild.name}",
-            color=discord.Color.green()
+        # Create ban confirmation embed
+        embed = Embeds.create_base(
+            title="🔨 User Banned",
+            description=f"{member.mention} has been banned.\nReason: {reason}",
+            color=discord.Color.red(),
+            author=ctx.author
         )
-        print(f'{ctx.author} executed whatisthisserver')
-        embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
-        embed.add_field(name="Server name", value=ctx.guild.name, inline=True)
-        embed.add_field(name="Server Member", value=ctx.guild.member_count, inline=True)
-        embed.add_field(name="Created at", value=ctx.guild.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
-        if ctx.guild.icon:
-            embed.set_thumbnail(url=ctx.guild.icon.url)
+        embed.set_thumbnail(url=member.avatar.url if member.avatar else None)
+        embed.add_field(name="Banned by", value=ctx.author.mention, inline=True)
+        embed.add_field(name="User ID", value=member.id, inline=True)
+        
+        # Send DM to user being banned
+        try:
+            dm_embed = Embeds.create_base(
+                title="You've been banned!",
+                description=f"You were banned from {ctx.guild.name}\nReason: {reason}",
+                color=discord.Color.red()
+            )
+            await member.send(embed=dm_embed)
+        except:
+            embed.add_field(name="Note", value="Could not DM user about ban.", inline=False)
+            
+        # Ban the user
+        await member.ban(reason=f"Banned by {ctx.author}: {reason}")
         await ctx.send(embed=embed)
+        
+    except discord.Forbidden:
+        await Embeds.error(ctx, "Error", "I don't have permission to ban this user!")
     except Exception as e:
-        await ctx.send(f"Error getting server info: {e}")
+        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
 
-# A command that displays user information
 @bot.command()
-async def userinfo(ctx, member: discord.Member):
-    print(f'{ctx.author} just executed the userinfo command.')
-    embed = discord.Embed(
-        title=f"User Info - {member.display_name}",
-        description=f"Here is the information for {member.mention}:",
-        color=discord.Color.green()
+async def unban(ctx, user_id: int, *, reason="No reason provided"):
+    # Check if user has ban permissions
+    if ctx.author.name != "chipoverhere":
+            embed = Embeds.create_base(
+        title="I know but!...",
+        description="I'm sorry",
+        color=discord.Color.red(),
+        author=ctx.author
     )
-    embed.set_thumbnail(url=member.avatar.url)
-    embed.add_field(name="Username", value=member.name, inline=True)
-    embed.add_field(name="Discriminator", value=member.discriminator, inline=True)
-    embed.add_field(name="ID", value=member.id, inline=True)
-    embed.add_field(name="Status", value=member.status, inline=True)
-    embed.add_field(name="Joined at", value=member.joined_at, inline=True)
-    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+    embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
     await ctx.send(embed=embed)
-
-# A command that displays the bot's commands
-@bot.command()
-async def cmds(ctx):
-    print(f'{ctx.author} just executed the cmds command.')
-    embed = discord.Embed(
-        title="Bot Commands",
-        description="Here are the commands you can use with this bot " + catjam + " :",
-        color=discord.Color.green()
-    )
-    embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
-    embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
-    embed.add_field(name="!whatisthisserver", value="Displays server information.", inline=False)
-    embed.add_field(name="!cmds", value="Displays this help message.", inline=False)
-    embed.add_field(name="!join", value="Join your voice channel you are in", inline=False)
-    embed.add_field(name="!leave", value="Leave voice channel [buggy]", inline=False)
-    embed.add_field(name="!play", value="Play an MP3 file in the voice channel [buggy]", inline=False)
-    embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
-    embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
-    embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
-    embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
-    embed.add_field(name="!ai", value="Talk to Groq's API!", inline=False)
-    embed.add_field(name="!funuser", value="Make fun of a user's name!", inline=False)
-    embed.add_field(name="!random", value="Get a random word!", inline=False)
-    embed.add_field(name="!invite", value="Invite the bot to your server!", inline=False)
-    embed.set_footer(text="Bot by Chipoverhere " + cutecat + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
-    embed.set_thumbnail(url=bot.user.avatar.url)
-    await ctx.send(embed=embed)
-
-# A command that steals social credit
-@bot.command()
-async def steelcredit(ctx, member: discord.Member = None):
-    print(f'{ctx.author} just executed the steelcredit command.')
-    if member is None:
-        embed = discord.Embed(
-            title="Missing Argument",
-            description="Please tag a person to steal social credit from.",
-            color=discord.Color.red()
+    if not ctx.author.guild_permissions.ban_members:
+        await Embeds.permission_denied(ctx)
+        return
+        
+    # Check if bot has ban permissions
+    if not ctx.guild.me.guild_permissions.ban_members:
+        await Embeds.error(ctx, "Bot Error", "I don't have permission to unban members!")
+        return
+        
+    try:
+        # Fetch the ban entry
+        ban_entry = await ctx.guild.fetch_ban(discord.Object(id=user_id))
+        if not ban_entry:
+            await Embeds.error(ctx, "Error", "This user is not banned!")
+            return
+            
+        # Create unban confirmation embed
+        embed = Embeds.create_base(
+            title="🔓 User Unbanned",
+            description=f"<@{user_id}> has been unbanned.\nReason: {reason}",
+            color=discord.Color.green(),
+            author=ctx.author
         )
-        embed.set_footer(text="Usage: !steelcredit @username")
+        embed.add_field(name="Unbanned by", value=ctx.author.mention, inline=True)
+        embed.add_field(name="User ID", value=user_id, inline=True)
+        
+        # Unban the user
+        await ctx.guild.unban(discord.Object(id=user_id), reason=f"Unbanned by {ctx.author}: {reason}")
         await ctx.send(embed=embed)
-    else:
-        socialcredit = discord.File("Images/social.webp", filename="RS.png")
-        await ctx.send(
-            f"HOLY COW {ctx.author.mention} STEEL 10000M SOCIAL CREDIT FROM {member.mention} !!! " + fling,
-            file=socialcredit
-        )
+        
+    except discord.NotFound:
+        await Embeds.error(ctx, "Error", "User not found or not banned!")
+    except discord.Forbidden:
+        await Embeds.error(ctx, "Error", "I don't have permission to unban users!")
+    except Exception as e:
+        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
 
-# A command to change the bot's status and activity
-@bot.command()
-async def changestate(ctx, status: str, activity_type: str, *, activity_name: str):
-    print(f'{ctx.author} just executed the changestate command.')
-    if ctx.author.name == "chipoverhere":
-        # Map the status string to discord.Status
-        status_map = {
-            "online": discord.Status.online,
-            "idle": discord.Status.idle,
-            "dnd": discord.Status.dnd,
-            "invisible": discord.Status.invisible
-        }
+#########################
+#    VOICE COMMANDS     #
+#########################
 
-        # Map the activity type string to discord.ActivityType
-        activity_type_map = {
-            "game": discord.ActivityType.playing,
-            "streaming": discord.ActivityType.streaming,
-            "listening": discord.ActivityType.listening,
-            "watching": discord.ActivityType.watching
-        }
-
-        # Get the status and activity type from the maps
-        new_status = status_map.get(status.lower())
-        new_activity_type = activity_type_map.get(activity_type.lower())
-
-        if new_status is None:
-            await ctx.send("Invalid status. Valid options are: online, idle, dnd, invisible.")
-            return
-
-        if new_activity_type is None:
-            await ctx.send("Invalid activity type. Valid options are: game, streaming, listening, watching.")
-            return
-
-        # Set the new presence
-        activity = discord.Activity(type=new_activity_type, name=activity_name)
-        await bot.change_presence(status=new_status, activity=activity)
-        await ctx.send(f"Changed status to {status} and activity to {activity_type} {activity_name}.")
-    else:
-        await ctx.send("You do not have permission to use this command.")
-
-# Command to join a voice channel
 @bot.command()
 async def join(ctx):
     print(f'{ctx.author} just executed the join command.')
     # Check if the user is in a voice channel
     if ctx.author.voice is None:
-        await send_error(ctx, "Voice Error", "You are not in a voice channel!")
+        await Embeds.error(ctx, "Voice Error", "You are not in a voice channel!")
         return
 
     # Get the voice channel the user is in
@@ -433,36 +378,37 @@ async def join(ctx):
 
     # Connect to the voice channel
     await channel.connect()
-    await send_success(ctx, "Voice Channel", f"Joined {channel.name}!")
+    await Embeds.success(ctx, "Voice Channel", f"Joined {channel.name}!")
 
-# Command to play an MP3 file
-@bot.command()
-async def play(ctx, filename: str):
-    print(f'{ctx.author} just executed the play command.')
-    if ctx.voice_client is None:
-        await send_error(ctx, "Voice Error", "I am not in a voice channel! Use !join to make me join a voice channel first.")
-        return
-
-    if not os.path.isfile(filename):
-        await send_error(ctx, "File Error", f"The file {filename} does not exist.")
-        return
-
-    source = discord.FFmpegPCMAudio(filename)
-    ctx.voice_client.play(source, after=lambda e: print(f"Finished playing: {e}"))
-    await send_success(ctx, "Now Playing", f"Playing: {filename}")
-
-# Command to leave a voice channel
 @bot.command()
 async def leave(ctx):
     print(f'{ctx.author} just executed the leave command.')
     if ctx.voice_client is None:
-        await send_error(ctx, "Voice Error", "I am not in a voice channel!")
+        await Embeds.error(ctx, "Voice Error", "I am not in a voice channel!")
         return
 
     await ctx.voice_client.disconnect()
-    await send_success(ctx, "Voice Channel", "Successfully disconnected from the voice channel.")
+    await Embeds.success(ctx, "Voice Channel", "Successfully disconnected from the voice channel.")
 
-# Russian Roulette command
+@bot.command()
+async def play(ctx, filename: str):
+    print(f'{ctx.author} just executed the play command.')
+    if ctx.voice_client is None:
+        await Embeds.error(ctx, "Voice Error", "I am not in a voice channel! Use !join to make me join a voice channel first.")
+        return
+
+    if not os.path.isfile(filename):
+        await Embeds.error(ctx, "File Error", f"The file {filename} does not exist.")
+        return
+
+    source = discord.FFmpegPCMAudio(filename)
+    ctx.voice_client.play(source, after=lambda e: print(f"Finished playing: {e}"))
+    await Embeds.success(ctx, "Now Playing", f"Playing: {filename}")
+
+#########################
+#     FUN COMMANDS      #
+#########################
+
 class RussianRouletteGame:
     def __init__(self):
         self.players = []
@@ -555,8 +501,8 @@ class RussianRouletteButtons(discord.ui.View):
                 self.game.game_active = False
                 button.disabled = True
                 winner_embed = discord.Embed(
-                    title=f"🎉 Game Over!, Call 911 {alert}",
-                    description=f"{self.game.players[0].mention} has won the game{doggokek}! {eliminated_player.mention} died (Bro IS NOT gi-hun💀){fling}",
+                    title=f"🎉 Game Over!, Call 911 {EMOJIS['alert']}",
+                    description=f"{self.game.players[0].mention} has won the game{EMOJIS['doggokek']}! {eliminated_player.mention} died (Bro IS NOT gi-hun💀)",
                     color=discord.Color.green()
                 )
                 await interaction.message.edit(embed=winner_embed, view=None)
@@ -577,14 +523,12 @@ async def russ(ctx):
     view = RussianRouletteButtons()
     await ctx.send(embed=view.game.get_status_embed(), view=view)
 
-# AI command
 @bot.command()
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
     response = get_groq_response(prompt)
     await send_long_message(ctx, response)
 
-# A command that makes fun of a user's name
 @bot.command()
 async def funuser(ctx, member: discord.Member):
     print(f'{ctx.author} just executed the funuser command.')
@@ -602,19 +546,192 @@ async def funuser(ctx, member: discord.Member):
             await ctx.send(response[i:i+2000])
         await ctx.send("Requested by " + ctx.author.mention)
 
-# A command to get a random word
+#########################
+#   UTILITY COMMANDS    #
+#########################
+
+@bot.command()
+async def cmds(ctx):
+    print(f'{ctx.author} just executed the cmds command.')
+    embed = discord.Embed(
+        title="Bot Commands",
+        description="Here are the commands you can use with this bot " + EMOJIS['catjam'] + " :",
+        color=discord.Color.green()
+    )
+    embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+    embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
+    embed.add_field(name="!whatisthisserver", value="Displays server information.", inline=False)
+    embed.add_field(name="!cmds", value="Displays this help message.", inline=False)
+    embed.add_field(name="!join", value="Join your voice channel you are in", inline=False)
+    embed.add_field(name="!leave", value="Leave voice channel [buggy]", inline=False)
+    embed.add_field(name="!play", value="Play an MP3 file in the voice channel [buggy]", inline=False)
+    embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
+    embed.add_field(name="!ban", value="Ban a user from the server (mention the user).", inline=False)
+    embed.add_field(name="!unban", value="Unban a user from the server (use userid).", inline=False)
+    embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
+    embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
+    embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
+    embed.add_field(name="!ai", value="Talk to Groq's API!", inline=False)
+    embed.add_field(name="!funuser", value="Make fun of a user's name!", inline=False)
+    embed.add_field(name="!random", value="Get a random word!", inline=False)
+    embed.add_field(name="!invite", value="Invite the bot to your server!", inline=False)
+    embed.set_footer(text="Bot by Chipoverhere " + EMOJIS['cutecat'] + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
+    embed.set_thumbnail(url=bot.user.avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def userinfo(ctx, member: discord.Member):
+    print(f'{ctx.author} just executed the userinfo command.')
+    embed = discord.Embed(
+        title=f"User Info - {member.display_name}",
+        description=f"Here is the information for {member.mention}:",
+        color=discord.Color.green()
+    )
+    embed.set_thumbnail(url=member.avatar.url)
+    embed.add_field(name="Username", value=member.name, inline=True)
+    embed.add_field(name="Discriminator", value=member.discriminator, inline=True)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Status", value=member.status, inline=True)
+    embed.add_field(name="Joined at", value=member.joined_at, inline=True)
+    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def hello(ctx):
+    print(f'{ctx.author} just executed the hello command.')
+    embed = Embeds.create_base(
+        title="Hello!",
+        description=f"Hello world! {EMOJIS['meloncat']}",
+        author=ctx.author
+    )
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def whatisthisserver(ctx):
+    try:
+        embed = discord.Embed(
+            title=f"{ctx.guild.name} - Server Info",
+            description=f"Info of {ctx.guild.name}",
+            color=discord.Color.green()
+        )
+        print(f'{ctx.author} executed whatisthisserver')
+        embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+        embed.add_field(name="Server name", value=ctx.guild.name, inline=True)
+        embed.add_field(name="Server Member", value=ctx.guild.member_count, inline=True)
+        embed.add_field(name="Created at", value=ctx.guild.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
+        if ctx.guild.icon:
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"Error getting server info: {e}")
+
+@bot.command()
+async def allowdmai(ctx, value: str):
+    global allowdmai
+    print(f'{ctx.author} just executed the allowdmai command.')
+    if ctx.author.name == "chipoverhere":
+        if value.lower() == "true":
+            allowdmai = "true"
+            await Embeds.success(ctx, "AI DM Settings", "AI responses to DMs have been enabled.")
+        elif value.lower() == "false":
+            allowdmai = "false"
+            await Embeds.success(ctx, "AI DM Settings", "AI responses to DMs have been disabled.")
+        else:
+            await Embeds.error(ctx, "Invalid value. Please use `true` or `false`.")
+    else:
+        await Embeds.permission_denied(ctx)
+
+@bot.command()
+async def senddm(ctx, user_id: int, *, message: str):
+    if ctx.author.name != "chipoverhere":
+        await Embeds.permission_denied(ctx)
+        return
+    
+    try:
+        user = await bot.fetch_user(user_id)
+        if user:
+            await user.send(message)
+            await Embeds.success(
+                ctx, 
+                "DM Sent",
+                f"Message sent to {user.name}#{user.discriminator} ({user_id})"
+            )
+            print(f"{ctx.author} sent DM to {user.name} ({user_id}): {message}")
+        else:
+            await Embeds.error(ctx, "User Error", "User not found!")
+    except discord.Forbidden:
+        await Embeds.error(ctx, "Permission Error", "Cannot send DM to this user!")
+    except Exception as e:
+        await Embeds.error(ctx, "Error", str(e))
+
+@bot.command()
+async def steelcredit(ctx, member: discord.Member = None):
+    print(f'{ctx.author} just executed the steelcredit command.')
+    if member is None:
+        embed = discord.Embed(
+            title="Missing Argument",
+            description="Please tag a person to steal social credit from.",
+            color=discord.Color.red()
+        )
+        embed.set_footer(text="Usage: !steelcredit @username")
+        await ctx.send(embed=embed)
+    else:
+        socialcredit = discord.File("Images/social.webp", filename="RS.png")
+        await ctx.send(
+            f"HOLY COW {ctx.author.mention} STEEL 10000M SOCIAL CREDIT FROM {member.mention} !!! " + EMOJIS['fling'],
+            file=socialcredit
+        )
+
+@bot.command()
+async def changestate(ctx, status: str, activity_type: str, *, activity_name: str):
+    print(f'{ctx.author} just executed the changestate command.')
+    if ctx.author.name == "chipoverhere":
+        # Map the status string to discord.Status
+        status_map = {
+            "online": discord.Status.online,
+            "idle": discord.Status.idle,
+            "dnd": discord.Status.dnd,
+            "invisible": discord.Status.invisible
+        }
+
+        # Map the activity type string to discord.ActivityType
+        activity_type_map = {
+            "game": discord.ActivityType.playing,
+            "streaming": discord.ActivityType.streaming,
+            "listening": discord.ActivityType.listening,
+            "watching": discord.ActivityType.watching
+        }
+
+        # Get the status and activity type from the maps
+        new_status = status_map.get(status.lower())
+        new_activity_type = activity_type_map.get(activity_type.lower())
+
+        if new_status is None:
+            await ctx.send("Invalid status. Valid options are: online, idle, dnd, invisible.")
+            return
+
+        if new_activity_type is None:
+            await ctx.send("Invalid activity type. Valid options are: game, streaming, listening, watching.")
+            return
+
+        # Set the new presence
+        activity = discord.Activity(type=new_activity_type, name=activity_name)
+        await bot.change_presence(status=new_status, activity=activity)
+        await ctx.send(f"Changed status to {status} and activity to {activity_type} {activity_name}.")
+    else:
+        await ctx.send("You do not have permission to use this command.")
+
 @bot.command()
 async def random(ctx):
     print(f'{ctx.author} just executed the random command.')
     response = get_groq_response("Give me a random word. NO YAPPING")
-    embed = create_embed(
+    embed = Embeds.create_base(
         title="Random Word",
         description=response,
         author=ctx.author
     )
     await ctx.send(embed=embed)
 
-# Mega PING with confirmation
 class MegaPingConfirmation(discord.ui.View):
     def __init__(self, ctx, member):
         super().__init__(timeout=30)
@@ -640,11 +757,11 @@ class MegaPingConfirmation(discord.ui.View):
 @bot.command()
 async def megaping(ctx, member: discord.Member):
     if ctx.author.name != "chipoverhere":
-        await send_permission_denied(ctx)
+        await Embeds.permission_denied(ctx)
         return
     
     print(f'{ctx.author} initiated megaping confirmation for {member}')
-    embed = create_embed(
+    embed = Embeds.create_base(
         title="⚠️ Mega Ping Confirmation",
         description=f"Are you sure you want to mega ping {member.mention}?",
         color=discord.Color.red(),
@@ -665,7 +782,6 @@ async def invite(ctx):
     
         await ctx.send(embed=embed)
 
-# Add command to view DM history (owner only)
 @bot.command()
 async def dmhistory(ctx, user_id: int = None):
     if ctx.author.name != "chipoverhere":
@@ -696,40 +812,19 @@ async def dmhistory(ctx, user_id: int = None):
     except Exception as e:
         await ctx.send(f"Error retrieving DM history: {e}")
 
-# Update error responses
-async def send_error(ctx, message):
-    embed = create_embed(
-        title="Error",
-        description=message,
-        color=discord.Color.red(),
-        author=ctx.author
-    )
-    await ctx.send(embed=embed)
-
-# Update permission denied responses
-async def send_permission_denied(ctx):
-    embed = create_embed(
-        title="Permission Denied",
-        description="You don't have permission to use this command!",
-        color=discord.Color.red(),
-        author=ctx.author
-    )
-    await ctx.send(embed=embed)
-
-# Add the new command to view DMs by user ID
 @bot.command()
 async def viewdm(ctx, user_id: int):
     if ctx.author.name != "chipoverhere":
-        await send_permission_denied(ctx)
+        await Embeds.permission_denied(ctx)
         return
         
     try:
         user = await bot.fetch_user(user_id)
         if not user:
-            await send_error(ctx, "User not found!")
+            await Embeds.error(ctx, "User not found!")
             return
             
-        embed = create_embed(
+        embed = Embeds.create_base(
             title=f"DM History for {user.name}",
             description=f"User ID: {user_id}",
             color=discord.Color.blue(),
@@ -755,9 +850,7 @@ async def viewdm(ctx, user_id: int):
         await ctx.send(embed=embed)
         
     except Exception as e:
-        await send_error(ctx, f"Error retrieving DMs: {str(e)}")
-
-
+        await Embeds.error(ctx, f"Error retrieving DMs: {str(e)}")
 
 class DMBomber(discord.ui.View):
     def __init__(self, ctx, user_id: int):
@@ -789,7 +882,7 @@ class DMBomber(discord.ui.View):
             for i in range(MAX_BOMB_MESSAGES):
                 try:
                     await self.rate_limiter.wait()
-                    embed = create_embed(
+                    embed = Embeds.create_base(
                         title=f"💣 BOOM! - BOMBED BY 💣{self.ctx.author}💣",
                         description=f"Message {i+1}/{MAX_BOMB_MESSAGES}",
                         color=discord.Color.red()
@@ -797,7 +890,7 @@ class DMBomber(discord.ui.View):
                     await user.send(embed=embed)
                 except discord.Forbidden:
                     await interaction.followup.send(
-                        embed=create_embed(
+                        embed=Embeds.create_base(
                             title="Error",
                             description="Cannot send DMs to this user!",
                             color=discord.Color.red()
@@ -810,14 +903,14 @@ class DMBomber(discord.ui.View):
                     break
                     
         except Exception as e:
-            await send_error(interaction, f"Failed to bomb user: {str(e)}")
+            await Embeds.error(interaction, f"Failed to bomb user: {str(e)}")
         finally:
             self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(
-            embed=create_embed(
+            embed=Embeds.create_base(
                 title="Cancelled",
                 description="Bombing cancelled",
                 color=discord.Color.green()
@@ -826,14 +919,13 @@ class DMBomber(discord.ui.View):
         )
         self.stop()
 
-# Update bomb command
 @bot.command()
 async def bomb(ctx, user_id: int):
     if ctx.author.name != "chipoverhere":
-        await send_permission_denied(ctx)
+        await Embeds.permission_denied(ctx)
         return
         
-    embed = create_embed(
+    embed = Embeds.create_base(
         title="💣 Bomb Confirmation",
         description=f"Are you sure you want to bomb user {user_id}?",
         color=discord.Color.red(),
@@ -844,5 +936,9 @@ async def bomb(ctx, user_id: int):
     view = DMBomber(ctx, user_id)
     await ctx.send(embed=embed, view=view, ephemeral=True)
 
-# Run the bot using the token you copied earlier
-bot.run(token)
+#########################
+#    BOT EXECUTION      #
+#########################
+
+if __name__ == "__main__":
+    bot.run(TOKEN)
