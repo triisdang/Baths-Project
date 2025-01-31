@@ -72,7 +72,7 @@ async def whatisthisserver(ctx):
         color=discord.Color.green()
     )
     print(f'{ctx.author} just executed the whatisthisserver command.')
-    embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
     embed.add_field(name="Server name", value=ctx.guild.name, inline=True)
     embed.add_field(name="Server Member", value=ctx.guild.member_count, inline=True)
     embed.add_field(name="Created at", value=ctx.guild.created_at, inline=True)
