@@ -134,7 +134,11 @@ async def on_message(message):
     # First process commands regardless of message type
     await bot.process_commands(message)
     
-    # Then handle DM AI responses if enabled
+    # Only print for DM messages
+    if isinstance(message.channel, discord.DMChannel):
+        print(f"DM from {message.author}: {message.content}")
+    
+    # Handle DM AI responses if enabled
     if allowdmai == "true" and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
         user_id = message.author.id
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -142,7 +146,7 @@ async def on_message(message):
         # Initialize user history if not exists
         if user_id not in dm_history:
             dm_history[user_id] = []
-            await message.channel.send("⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
+            await message.channel.send("-# ⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
 
         # Get AI response and handle it
         response = get_groq_response(message.content, user_id)
