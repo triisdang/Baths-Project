@@ -19,6 +19,13 @@ BOMB_COOLDOWN = 300
 BOMB_RATE_LIMIT = 0.5
 MAX_BOMB_MESSAGES = 100
 
+# Developer list - add Discord usernames
+DEVELOPERS = [
+    "chipoverhere",  # Main developer
+    "dev2name",      # Add more devs here
+    "dev3name"       # Add more devs here
+]
+
 # Load tokens
 with open("token.txt", "r") as file:
     TOKEN = file.read().strip()
@@ -28,6 +35,7 @@ with open("groqtoken.txt", "r") as file:
 
 # Emojis
 EMOJIS = {
+    "trollhand":"<:trollhand:1334963873094304103>",
     "fling": "<:fling:1334142789788897352>",
     "ooooo": "<a:ooooo:1334142810986774620>",
     "doggokek": "<a:doggokek:1334142827050831944>",
@@ -150,6 +158,10 @@ dm_cooldowns = {}
 #########################
 #   HELPER FUNCTIONS    #
 #########################
+
+def is_dev(user_name: str) -> bool:
+    """Check if a user is a developer"""
+    return user_name in DEVELOPERS
 
 async def check_cooldown(user_id: int) -> tuple[bool, int]:
     if user_id in dm_cooldowns:
@@ -315,8 +327,8 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
 @bot.command()
 async def unban(ctx, user_id: int, *, reason="No reason provided"):
     # Check if user has ban permissions
-    if ctx.author.name != "chipoverhere":
-            embed = Embeds.create_base(
+    if is_dev(ctx.author.name):
+        embed = Embeds.create_base(
         title="I know but!...",
         description="I'm sorry",
         color=discord.Color.red(),
@@ -580,6 +592,32 @@ async def cmds(ctx):
     await ctx.send(embed=embed)
 
 @bot.command()
+async def debugcmds(ctx):
+    if is_dev(ctx.author.name):
+        print(f'{ctx.author} just executed the cmds command.')
+        embed = discord.Embed(
+            title="Bot Debug Commands",
+            description="Developer Commands " + EMOJIS['trollhand'] + " :",
+            color=discord.Color.green()
+        )
+        embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+        embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
+        embed.add_field(name="!senddm", value="Send DM to a user.(userid)", inline=False)
+        embed.add_field(name="!allowdmai", value="True/False, Use for letting the user use ai in DMs", inline=False)
+        embed.add_field(name="!viewdm", value="View DM bot with user(userid)", inline=False)
+        embed.add_field(name="!dmhistory", value="Don't use this for now.", inline=False)
+        embed.add_field(name="More coming soon...", value="soon.", inline=False)
+        embed.add_field(name=f"TROLL COMMANDS", value=f"TROLL {EMOJIS['trollhand']} ", inline=False)
+        embed.add_field(name="!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
+        embed.add_field(name="!megaping", value=f"Don't you dare try it. {EMOJIS['fling']}", inline=False)
+        embed.add_field(name="More coming soon...", value="soon.", inline=False)
+        embed.set_thumbnail(url=bot.user.avatar.url)
+        await ctx.send(embed=embed)
+    else : 
+        await Embeds.permission_denied(ctx)
+        await ctx.send("-# Only developers can use this command!")
+
+@bot.command()
 async def userinfo(ctx, member: discord.Member):
     print(f'{ctx.author} just executed the userinfo command.')
     embed = discord.Embed(
@@ -629,7 +667,7 @@ async def whatisthisserver(ctx):
 async def allowdmai(ctx, value: str):
     global allowdmai
     print(f'{ctx.author} just executed the allowdmai command.')
-    if ctx.author.name == "chipoverhere":
+    if is_dev(ctx.author.name):
         if value.lower() == "true":
             allowdmai = "true"
             await Embeds.success(ctx, "AI DM Settings", "AI responses to DMs have been enabled.")
@@ -643,7 +681,7 @@ async def allowdmai(ctx, value: str):
 
 @bot.command()
 async def senddm(ctx, user_id: int, *, message: str):
-    if ctx.author.name != "chipoverhere":
+    if not is_dev(ctx.author.name):
         await Embeds.permission_denied(ctx)
         return
     
@@ -756,7 +794,7 @@ class MegaPingConfirmation(discord.ui.View):
 
 @bot.command()
 async def megaping(ctx, member: discord.Member):
-    if ctx.author.name != "chipoverhere":
+    if not is_dev(ctx.author.name):
         await Embeds.permission_denied(ctx)
         return
     
@@ -784,8 +822,8 @@ async def invite(ctx):
 
 @bot.command()
 async def dmhistory(ctx, user_id: int = None):
-    if ctx.author.name != "chipoverhere":
-        await ctx.send("You don't have permission to use this command!")
+    if not is_dev(ctx.author.name):
+        await Embeds.permission_denied(ctx)
         return
         
     try:
@@ -814,7 +852,7 @@ async def dmhistory(ctx, user_id: int = None):
 
 @bot.command()
 async def viewdm(ctx, user_id: int):
-    if ctx.author.name != "chipoverhere":
+    if not is_dev(ctx.author.name):
         await Embeds.permission_denied(ctx)
         return
         
@@ -921,7 +959,7 @@ class DMBomber(discord.ui.View):
 
 @bot.command()
 async def bomb(ctx, user_id: int):
-    if ctx.author.name != "chipoverhere":
+    if not is_dev(ctx.author.name):
         await Embeds.permission_denied(ctx)
         return
         
