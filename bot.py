@@ -66,10 +66,36 @@ async def hello(ctx):
 # A command that displays server information
 @bot.command()
 async def whatisthisserver(ctx):
-    print(f'{ctx.author} just executed the whatisthisserver command.')
-    await ctx.send(
-        f"This is {ctx.guild.name} server, created at {ctx.guild.created_at} and has {ctx.guild.member_count} members!"
+    embed = discord.Embed(
+        title=f"{ctx.guild.name} - Server Info",
+        description=f"Info of {ctx.guild.name}",
+        color=discord.Color.green()
     )
+    print(f'{ctx.author} just executed the whatisthisserver command.')
+    embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+    embed.add_field(name="Server name", value=ctx.guild.name, inline=True)
+    embed.add_field(name="Server Member", value=ctx.guild.member_count, inline=True)
+    embed.add_field(name="Created at", value=ctx.guild.created_at, inline=True)
+    embed.set_thumbnail(url=ctx.guild.icon.url)
+    await ctx.send(embed=embed)
+
+# A command that displays user information
+@bot.command()
+async def userinfo(ctx, member: discord.Member):
+    print(f'{ctx.author} just executed the userinfo command.')
+    embed = discord.Embed(
+        title=f"User Info - {member.display_name}",
+        description=f"Here is the information for {member.mention}:",
+        color=discord.Color.green()
+    )
+    embed.set_thumbnail(url=member.avatar.url)
+    embed.add_field(name="Username", value=member.name, inline=True)
+    embed.add_field(name="Discriminator", value=member.discriminator, inline=True)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Status", value=member.status, inline=True)
+    embed.add_field(name="Joined at", value=member.joined_at, inline=True)
+    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+    await ctx.send(embed=embed)
 
 # A command that displays the bot's commands
 @bot.command()
@@ -117,24 +143,6 @@ async def steelcredit(ctx, member: discord.Member = None):
             f"HOLY COW {ctx.author.mention} STEEL 10000M SOCIAL CREDIT FROM {member.mention} !!! " + fling,
             file=socialcredit
         )
-
-# A command that displays user information
-@bot.command()
-async def userinfo(ctx, member: discord.Member):
-    print(f'{ctx.author} just executed the userinfo command.')
-    embed = discord.Embed(
-        title=f"User Info - {member.display_name}",
-        description=f"Here is the information for {member.mention}:",
-        color=discord.Color.green()
-    )
-    embed.set_thumbnail(url=member.avatar.url)
-    embed.add_field(name="Username", value=member.name, inline=True)
-    embed.add_field(name="Discriminator", value=member.discriminator, inline=True)
-    embed.add_field(name="ID", value=member.id, inline=True)
-    embed.add_field(name="Status", value=member.status, inline=True)
-    embed.add_field(name="Joined at", value=member.joined_at, inline=True)
-    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
-    await ctx.send(embed=embed)
 
 # A command to change the bot's status and activity
 @bot.command()
