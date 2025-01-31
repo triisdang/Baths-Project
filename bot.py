@@ -467,9 +467,10 @@ class RussianRouletteGame:
     def __init__(self):
         self.players = []
         self.current_player_index = 0
-        self.bullet_position = randint(0, 5)  # Use randint directly
+        self.bullet_position = randint(0, 5)
         self.current_chamber = 0
         self.game_active = False
+        self.host = None  # Add host tracking
 
     def get_status_embed(self):
         embed = discord.Embed(
@@ -481,12 +482,18 @@ class RussianRouletteGame:
         if not self.game_active and not self.players:
             embed.add_field(name="Status", value="Waiting for players to join...", inline=False)
         elif not self.game_active and self.players:
-            players_list = "\n".join([f"• {player.mention}" for player in self.players])
+            players_list = "\n".join([
+                f"• {player.mention} 👑" if player == self.host else f"• {player.mention}" 
+                for player in self.players
+            ])
             embed.add_field(name="Players Joined To Death", value=players_list, inline=False)
-            embed.add_field(name="Status", value="Waiting for more players or game start", inline=False)
+            embed.add_field(name="Status", value=f"Waiting for the host ({self.host.mention}) to start the game", inline=False)
         else:
-            players_list = "\n".join([f"• {player.mention}" + (" 🎯" if i == self.current_player_index else "")
-                                      for i, player in enumerate(self.players)])
+            players_list = "\n".join([
+                f"• {player.mention} 👑{' 🎯' if i == self.current_player_index else ''}" if player == self.host 
+                else f"• {player.mention}{' 🎯' if i == self.current_player_index else ''}"
+                for i, player in enumerate(self.players)
+            ])
             embed.add_field(name="Players", value=players_list, inline=False)
             embed.add_field(name="Chamber", value=f"{self.current_chamber + 1}/6", inline=True)
             embed.add_field(name="Current Turn", value=self.players[self.current_player_index].mention, inline=True)
@@ -497,33 +504,42 @@ class RussianRouletteButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=180)
         self.game = RussianRouletteGame()
-        self.message = None
-
-    async def update_message(self, interaction: discord.Interaction):
-        await interaction.message.edit(embed=self.game.get_status_embed(), view=self)
 
     @discord.ui.button(label="Join Game", style=discord.ButtonStyle.primary)
     async def join_game(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user not in self.game.players:
+            # Set host if this is the first player
+            if not self.game.players:
+                self.game.host = interaction.user
+                await interaction.response.send_message(f"You are the host! {interaction.user.mention}", ephemeral=True)
+            
             self.game.players.append(interaction.user)
 
             if len(self.game.players) >= 2:
-                self.children[0].disabled = True
-                self.children[1].disabled = False
+                self.children[0].disabled = False  # Keep join button enabled
+                self.children[1].disabled = False  # Enable start button
 
             await self.update_message(interaction)
-            await interaction.response.defer()
+            if interaction.user != self.game.host:
+                await interaction.response.defer()
 
     @discord.ui.button(label="Start Game", style=discord.ButtonStyle.success, disabled=True)
     async def start_game(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.game.host:
+            await interaction.response.send_message("Only the host can start the game!", ephemeral=True)
+            return
+            
         if len(self.game.players) >= 2:
             self.game.game_active = True
-            shuffle(self.game.players)  # Use shuffle directly
+            shuffle(self.game.players)  # Shuffle players
             button.disabled = True
+            self.children[0].disabled = True  # Disable join button after start
             self.children[2].disabled = False
 
             await self.update_message(interaction)
             await interaction.response.defer()
+        else:
+            await interaction.response.send_message("Need at least 2 players to start!", ephemeral=True)
 
     @discord.ui.button(label="Pull Trigger💀", style=discord.ButtonStyle.danger, disabled=True)
     async def pull_trigger(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -774,7 +790,7 @@ class DMBomber(discord.ui.View):
                 try:
                     await self.rate_limiter.wait()
                     embed = create_embed(
-                        title="💣 BOOM!",
+                        title=f"💣 BOOM! - BOMBED BY 💣{self.ctx.author}💣",
                         description=f"Message {i+1}/{MAX_BOMB_MESSAGES}",
                         color=discord.Color.red()
                     )
