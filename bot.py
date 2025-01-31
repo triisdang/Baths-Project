@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
 import os
-from time import sleep
-from random import randint, shuffle  # Change to specific import
+from datetime import datetime
+from random import randint, shuffle
 import requests
 import json
 
@@ -30,26 +30,58 @@ intents.message_content = True  # Enable the message content intent
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Function to interact with Groq API
-def get_groq_response(prompt):
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {groq_api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    }
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    response_json = response.json()
-    return response_json.get("choices", [{}])[0].get("message", {}).get("content", "No response from Groq API")
+dm_history = {}  # Dictionary to store DM history {user_id: [(timestamp, content)]}
 
+# Constants
+COMMAND_PREFIX = "!"
+MAX_DM_HISTORY = 50
+API_TIMEOUT = 30
+
+# Helper Functions
+def get_groq_response(prompt, user_id=None):
+    try:
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_api_key}",
+            "Content-Type": "application/json"
+        }
+
+        # Get chat history if user_id provided
+        messages = []
+        if user_id and user_id in dm_history:
+            # Format previous conversations
+            for timestamp, role, content in dm_history[user_id]:
+                messages.append({
+                    "role": "user" if role == "User" else "assistant",
+                    "content": content
+                })
+
+        # Add current prompt
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+
+        data = {
+            "model": "llama-3.2-90b-vision-preview",
+            "messages": messages
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=API_TIMEOUT)
+        response.raise_for_status()
+        return response.json().get("choices", [{}])[0].get("message", {}).get("content", "No response")
+    except Exception as e:
+        print(f"API Error: {e}")
+        return "Sorry, I encountered an error while processing your request."
+
+#
+#
+#
+#
+#                            EVENTS 🤖
+#
+#
+#
 # When the bot is ready
 @bot.event
 async def on_ready():
@@ -57,6 +89,36 @@ async def on_ready():
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f'I am ready! My name is {bot.user}!')
 
+
+# Add after intents setup and before bot commands
+@bot.event
+async def on_message(message):
+    if isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
+        user_id = message.author.id
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        if user_id not in dm_history:
+            dm_history[user_id] = []
+        
+        response = get_groq_response(message.content, user_id)
+        
+        dm_history[user_id].append((timestamp, "User", message.content))
+        dm_history[user_id].append((timestamp, "AI", response))
+        
+        await message.channel.send(response)
+        print(f'AI response to {message.author}: {response}')
+    
+    await bot.process_commands(message)
+#
+#
+#
+#
+#
+#                         COMMANDS  🤖
+#
+#
+#
+#
 # Test command
 @bot.command()
 async def hello(ctx):
@@ -66,18 +128,22 @@ async def hello(ctx):
 # A command that displays server information
 @bot.command()
 async def whatisthisserver(ctx):
-    embed = discord.Embed(
-        title=f"{ctx.guild.name} - Server Info",
-        description=f"Info of {ctx.guild.name}",
-        color=discord.Color.green()
-    )
-    print(f'{ctx.author} just executed the whatisthisserver command.')
-    embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
-    embed.add_field(name="Server name", value=ctx.guild.name, inline=True)
-    embed.add_field(name="Server Member", value=ctx.guild.member_count, inline=True)
-    embed.add_field(name="Created at", value=ctx.guild.created_at, inline=True)
-    embed.set_thumbnail(url=ctx.guild.icon.url)
-    await ctx.send(embed=embed)
+    try:
+        embed = discord.Embed(
+            title=f"{ctx.guild.name} - Server Info",
+            description=f"Info of {ctx.guild.name}",
+            color=discord.Color.green()
+        )
+        print(f'{ctx.author} executed whatisthisserver')
+        embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+        embed.add_field(name="Server name", value=ctx.guild.name, inline=True)
+        embed.add_field(name="Server Member", value=ctx.guild.member_count, inline=True)
+        embed.add_field(name="Created at", value=ctx.guild.created_at.strftime("%Y-%m-%d %H:%M:%S"), inline=True)
+        if ctx.guild.icon:
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"Error getting server info: {e}")
 
 # A command that displays user information
 @bot.command()
@@ -311,7 +377,7 @@ class RussianRouletteButtons(discord.ui.View):
                 await interaction.message.edit(embed=winner_embed, view=None)
                 await interaction.response.defer()
                 await interaction.channel.send(f"Pov {self.game.players[0].mention} rn :")
-                await interaction.channel.send("https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExenlyM2gzbnc2eG5ydnJ3ODlkeGdvZXN1dXg0N3p4NTRlc3ZkdXIzayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/nrpCs0Bwdxp8k9FoPy/giphy.gif")
+                await interaction.channel.send("https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExenlyM2gzbnc2eG5ydnJ3ODlkeGdvZXN1dXg0N3p4NTRlc3ZkdXIzayZlcD12MV9pbnRlcm5naWZfYnlfaWQmY3Q9Zw/nrpCs0Bwdxp8k9FoPy/giphy.gif")
                 return
         else:
             self.game.current_chamber = (self.game.current_chamber + 1) % 6
@@ -408,6 +474,37 @@ async def invite(ctx):
         embed.add_field(name="Invite Link", value="[Invite Link](https://bathsbot.vercel.app/)", inline=False)
     
         await ctx.send(embed=embed)
+
+# Add command to view DM history (owner only)
+@bot.command()
+async def dmhistory(ctx, user_id: int = None):
+    if ctx.author.name != "chipoverhere":
+        await ctx.send("You don't have permission to use this command!")
+        return
+        
+    try:
+        embed = discord.Embed(
+            title="DM History" if user_id is None else f"DM History for User {user_id}",
+            color=discord.Color.blue()
+        )
+        
+        if user_id is None:
+            for uid, messages in dm_history.items():
+                user = await bot.fetch_user(uid)
+                recent_msgs = messages[-5:]  # Show last 5 messages
+                value = "\n".join([f"`{t}` **{r}**: {c[:100]}..." for t, r, c in recent_msgs])
+                embed.add_field(name=f"{user.name} ({uid})", value=value or "No messages", inline=False)
+        else:
+            if user_id in dm_history:
+                messages = dm_history[user_id][-10:]  # Show last 10 messages
+                for t, r, c in messages:
+                    embed.add_field(name=f"{t} - {r}", value=c[:1024], inline=False)
+            else:
+                embed.description = "No DM history found for this user."
+        
+        await ctx.send(embed=embed)
+    except Exception as e:
+        await ctx.send(f"Error retrieving DM history: {e}")
 
 # Run the bot using the token you copied earlier
 bot.run(token)
