@@ -21,9 +21,9 @@ MAX_BOMB_MESSAGES = 100
 
 # Developer list - add Discord usernames
 DEVELOPERS = [
-    "chipoverhere",  # Main developer
-    "dev2name",      # Add more devs here
-    "dev3name"       # Add more devs here
+    "chipoverhere"  # Main developer
+ #   "dev2name",      # Add more devs here
+  #  "dev3name"       # Add more devs here
 ]
 
 # Load tokens
@@ -35,6 +35,7 @@ with open("groqtoken.txt", "r") as file:
 
 # Emojis
 EMOJIS = {
+    "x":"<:x_:1334966527954255882>",
     "trollhand":"<:trollhand:1334963873094304103>",
     "fling": "<:fling:1334142789788897352>",
     "ooooo": "<a:ooooo:1334142810986774620>",
@@ -95,8 +96,8 @@ class Embeds:
     @staticmethod
     async def permission_denied(ctx):
         embed = Embeds.create_base(
-            title="Permission Denied",
-            description="You don't have permission to use this command!",
+            title=f"Permission Denied {EMOJIS['x']}",
+            description=f"You don't have permission to use this command {EMOJIS['x']} !",
             color=discord.Color.red(),
             author=ctx.author
         )
@@ -106,7 +107,8 @@ class Embeds:
 #    API FUNCTIONS      #
 #########################
 
-def get_groq_response(prompt, user_id=None):
+# Update get_groq_response to handle images/files
+def get_groq_response(prompt, user_id=None, attachments=None):
     try:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -129,6 +131,19 @@ def get_groq_response(prompt, user_id=None):
             "role": "user",
             "content": prompt
         })
+
+        # Add attachments if any
+        if attachments:
+            for attachment in attachments:
+                messages.append({
+                    "role": "user",
+                    "content": {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": attachment.url
+                        }
+                    }
+                })
 
         data = {
             "model": "llama-3.2-90b-vision-preview",
@@ -207,12 +222,7 @@ async def send_long_message(ctx, content, title="AI Response", split_size=1024):
 #    EVENT HANDLERS     #
 #########################
 
-@bot.event
-async def on_ready():
-    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")
-    await bot.change_presence(status=discord.Status.online, activity=activity)
-    print(f'I am ready! My name is {bot.user}!')
-
+# Update on_message event to pass attachments
 @bot.event
 async def on_message(message):
     # First process commands regardless of message type
@@ -242,7 +252,8 @@ async def on_message(message):
             await message.channel.send(embed=embed)
 
         # Get AI response and handle it
-        response = get_groq_response(message.content, user_id)
+        attachments = message.attachments if message.attachments else None
+        response = get_groq_response(message.content, user_id, attachments)
         dm_history[user_id].append((timestamp, "User", message.content))
         dm_history[user_id].append((timestamp, "AI", response))
 
@@ -261,6 +272,12 @@ async def on_message(message):
         
         if len(response) > 2000:
             await send_long_message(message.channel, response[2000:], title="Continued...")
+
+@bot.event
+async def on_ready():
+    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")
+    await bot.change_presence(status=discord.Status.online, activity=activity)
+    print(f'I am ready! My name is {bot.user}!')
 
 #########################
 #  MODERATION COMMANDS  #
@@ -535,11 +552,15 @@ async def russ(ctx):
     view = RussianRouletteButtons()
     await ctx.send(embed=view.game.get_status_embed(), view=view)
 
+# Update !ai command to handle attachments
 @bot.command()
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
-    response = get_groq_response(prompt)
-    await send_long_message(ctx, response)
+    attachments = ctx.message.attachments if ctx.message.attachments else None
+    response = get_groq_response(prompt, ctx.author.id, attachments)
+    # Split the response into chunks of 2000 characters
+    for i in range(0, len(response), 2000):
+        await ctx.send(response[i:i+2000])
 
 @bot.command()
 async def funuser(ctx, member: discord.Member):
