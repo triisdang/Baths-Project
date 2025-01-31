@@ -131,49 +131,40 @@ allowdmai = "true"
 # Add after intents setup and before bot commands 
 @bot.event
 async def on_message(message):
-    # Only process DMs and ignore self messages
-    if allowdmai == "true":
-        if isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
-            user_id = message.author.id
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # First process commands regardless of message type
+    await bot.process_commands(message)
+    
+    # Then handle DM AI responses if enabled
+    if allowdmai == "true" and isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
+        user_id = message.author.id
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-            # Initialize user history if not exists
-            if user_id not in dm_history:
-                dm_history[user_id] = []
-                # Send privacy notice only once when starting new conversation 
-                await message.channel.send("⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
+        # Initialize user history if not exists
+        if user_id not in dm_history:
+            dm_history[user_id] = []
+            await message.channel.send("⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
 
-            # Get AI response
-            response = get_groq_response(message.content, user_id)
+        # Get AI response and handle it
+        response = get_groq_response(message.content, user_id)
+        dm_history[user_id].append((timestamp, "User", message.content))
+        dm_history[user_id].append((timestamp, "AI", response))
 
-            # Log the conversation
-            dm_history[user_id].append((timestamp, "User", message.content))
-            dm_history[user_id].append((timestamp, "AI", response))
+        # Trim history if needed
+        if len(dm_history[user_id]) > MAX_DM_HISTORY:
+            dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
 
-            # Maintain history limit
-            if len(dm_history[user_id]) > MAX_DM_HISTORY:
-                dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
+        # Send response with embed
+        embed = create_embed(
+            title="AI Response",
+            description=response[:2000],
+            author=message.author,
+            footer="Note: DMs are logged and viewable by the bot owner."
+        )
+        await message.channel.send(embed=embed)
+        
+        if len(response) > 2000:
+            await send_long_message(message.channel, response[2000:], title="Continued...")
 
-            # Send response
-            embed = create_embed(
-                title="AI Response",
-                description=response[:2000],
-                author=message.author,
-                footer="Note: DMs are logged and viewable by the bot owner."
-            )
-            await message.channel.send(embed=embed)
-            
-            # Send additional chunks if needed
-            if len(response) > 2000:
-                await send_long_message(message.channel, response[2000:], title="Continued...")
-
-            print(f'AI response to {message.author} (ID: {message.author.id}): {response[:100]}...')
-
-            # Process commands after handling DM
-            await bot.process_commands(message)
-    else:
-        # Process commands for non-DM messages
-        uselessvar = "true"
 #
 #
 #
@@ -228,7 +219,7 @@ async def hello(ctx):
     print(f'{ctx.author} just executed the hello command.')
     embed = create_embed(
         title="Hello!",
-        description=f"Hello cc! {meloncat}",
+        description=f"Hello world! {meloncat}",
         author=ctx.author
     )
     await ctx.send(embed=embed)
@@ -638,6 +629,47 @@ async def send_permission_denied(ctx):
         author=ctx.author
     )
     await ctx.send(embed=embed)
+
+# Add the new command to view DMs by user ID
+@bot.command()
+async def viewdm(ctx, user_id: int):
+    if ctx.author.name != "chipoverhere":
+        await send_permission_denied(ctx)
+        return
+        
+    try:
+        user = await bot.fetch_user(user_id)
+        if not user:
+            await send_error(ctx, "User not found!")
+            return
+            
+        embed = create_embed(
+            title=f"DM History for {user.name}",
+            description=f"User ID: {user_id}",
+            color=discord.Color.blue(),
+            author=ctx.author
+        )
+        
+        if user_id in dm_history:
+            # Get the last 10 messages
+            messages = dm_history[user_id][-10:]
+            for i, (timestamp, role, content) in enumerate(messages, 1):
+                name = f"{i}. {timestamp} - {role}"
+                # Truncate content if too long
+                value = content if len(content) <= 1024 else content[:1021] + "..."
+                embed.add_field(name=name, value=value, inline=False)
+                
+            embed.set_footer(text=f"Showing last {len(messages)} messages")
+        else:
+            embed.description = "No DM history found for this user."
+            
+        if user.avatar:
+            embed.set_thumbnail(url=user.avatar.url)
+            
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        await send_error(ctx, f"Error retrieving DMs: {str(e)}")
 
 # Run the bot using the token you copied earlier
 bot.run(token)
