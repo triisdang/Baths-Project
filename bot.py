@@ -15,7 +15,7 @@ with open("groqtoken.txt", "r") as file:
     groq_api_key = file.read().strip()
 
 # Pair emojis
-fling = "<:fling:1334142789788897352>"
+fling = "<a:fling:1334142789788897352>"
 ooooo = "<:ooooo:1334142810986774620>"
 doggokek = "<:doggokek:1334142827050831944>"
 cutecat = "<:cutecat:1334142840871325777>"
@@ -360,7 +360,8 @@ class MegaPingConfirmation(discord.ui.View):
         if interaction.user.name == "chipoverhere":
             await interaction.response.send_message("Initiating mega ping...")
             for _ in range(100):
-                await self.ctx.send(self.member.mention, self.member.mention, self.member.mention, self.member.mention)
+                # Fix: Concatenate mentions in a single string
+                await self.ctx.send(f"{self.member.mention} {self.member.mention} {self.member.mention} {self.member.mention} ping")
         else:
             await interaction.response.send_message("You don't have permission to use this command!", ephemeral=True)
         self.stop()
