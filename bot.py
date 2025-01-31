@@ -90,24 +90,36 @@ async def on_ready():
     print(f'I am ready! My name is {bot.user}!')
 
 
-# Add after intents setup and before bot commands
+# Add after intents setup and before bot commands 
 @bot.event
 async def on_message(message):
+    # Only process DMs and ignore self messages
     if isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
         user_id = message.author.id
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # Initialize user history if not exists
         if user_id not in dm_history:
             dm_history[user_id] = []
+            # Send privacy notice only once when starting new conversation
+            await message.channel.send("-# ⚠️ By chatting with this bot via DMs, you acknowledge that the bot owner may view the conversation history for debugging purposes.")
         
+        # Get AI response
         response = get_groq_response(message.content, user_id)
         
+        # Log the conversation
         dm_history[user_id].append((timestamp, "User", message.content))
         dm_history[user_id].append((timestamp, "AI", response))
         
+        # Maintain history limit
+        if len(dm_history[user_id]) > MAX_DM_HISTORY:
+            dm_history[user_id] = dm_history[user_id][-MAX_DM_HISTORY:]
+        
+        # Send response
         await message.channel.send(response)
-        print(f'AI response to {message.author}: {response}')
+        print(f'AI response to {message.author} (ID: {message.author.id}): {response[:100]}...')
     
+    # Process commands after handling DM
     await bot.process_commands(message)
 #
 #
