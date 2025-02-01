@@ -7,6 +7,7 @@ from random import randint, shuffle
 import requests
 import json
 from typing import Optional
+from groq import Groq
 
 #########################
 #       CONSTANTS       #
@@ -121,51 +122,56 @@ class Embeds:
 #########################
 
 # Update get_groq_response to handle images/files
-def get_groq_response(prompt, user_id=None, attachments=None):
+async def generate_response(prompt, conversation_history=None, attachments=None):
     try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        # Get chat history if user_id provided
+        client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        
         messages = []
-        if user_id and user_id in dm_history:
-            # Format previous conversations
-            for timestamp, role, content in dm_history[user_id]:
+        
+        # Add conversation history
+        if conversation_history:
+            for role, content in conversation_history:
                 messages.append({
                     "role": "user" if role == "User" else "assistant",
                     "content": content
                 })
 
-        # Add current prompt
-        messages.append({
-            "role": "user",
-            "content": prompt
+        # Prepare content list for the current message
+        current_content = []
+        
+        # Add text prompt
+        current_content.append({
+            "type": "text",
+            "text": prompt
         })
-
+        
         # Add attachments if any
         if attachments:
             for attachment in attachments:
-                messages.append({
-                    "role": "user",
-                    "content": {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": attachment.url
-                        }
+                current_content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": attachment.url
                     }
                 })
-
-        data = {
-            "model": "llama-3.2-90b-vision-preview",
-            "messages": messages
-        }
         
-        response = requests.post(url, headers=headers, json=data, timeout=API_TIMEOUT)
-        response.raise_for_status()
-        return response.json().get("choices", [{}])[0].get("message", {}).get("content", "No response")
+        # Add the message with combined content
+        messages.append({
+            "role": "user",
+            "content": current_content
+        })
+
+        completion = client.chat.completions.create(
+            model="llama-3.2-11b-vision-preview",
+            messages=messages,
+            temperature=0.7,
+            max_completion_tokens=1024,
+            top_p=1,
+            stream=False
+        )
+        
+        return completion.choices[0].message.content
+        
     except Exception as e:
         print(f"API Error: {e}")
         return "Sorry, I encountered an error while processing your request."
@@ -266,7 +272,7 @@ async def on_message(message):
 
         # Get AI response and handle it
         attachments = message.attachments if message.attachments else None
-        response = get_groq_response(message.content, user_id, attachments)
+        response = await generate_response(message.content, dm_history[user_id], attachments)
         dm_history[user_id].append((timestamp, "User", message.content))
         dm_history[user_id].append((timestamp, "AI", response))
 
@@ -563,7 +569,7 @@ async def russ(ctx):
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
     attachments = ctx.message.attachments if ctx.message.attachments else None
-    response = get_groq_response(prompt, ctx.author.id, attachments)
+    response = await generate_response(prompt, ctx.author.id, attachments)
     # Split the response into chunks of 2000 characters
     for i in range(0, len(response), 2000):
         await ctx.send(response[i:i+2000])
@@ -579,7 +585,7 @@ async def funuser(ctx, member: discord.Member):
         )
         await ctx.send(embed=embed)
     else:
-        response = get_groq_response("Make this user name funny (please cook the name into something really funny and meme. also, be mean too.): " + member.display_name)
+        response = await generate_response("Make this user name funny (please cook the name into something really funny and meme. also, be mean too.): " + member.display_name)
         # Split the response into chunks of 2000 characters
         for i in range(0, len(response), 2000):
             await ctx.send(response[i:i+2000])
@@ -794,7 +800,7 @@ async def changestate(ctx, status: str, activity_type: str, *, activity_name: st
 @bot.command()
 async def random(ctx):
     print(f'{ctx.author} just executed the random command.')
-    response = get_groq_response("Give me a random word. NO YAPPING")
+    response = await generate_response("Give me a random word. NO YAPPING")
     embed = Embeds.create_base(
         title="Random Word",
         description=response,
