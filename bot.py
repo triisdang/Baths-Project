@@ -124,7 +124,7 @@ class Embeds:
 # Update get_groq_response to handle images/files
 async def generate_response(prompt, conversation_history=None, attachments=None):
     try:
-        client = Groq(api_key=os.getenv('GROQ_API_KEY'))
+        client = Groq(api_key=GROQ_API_KEY)  # Pass the api_key directly
         
         messages = []
         
