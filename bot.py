@@ -18,7 +18,8 @@ API_TIMEOUT = 30
 BOMB_COOLDOWN = 300
 BOMB_RATE_LIMIT = 0.5
 MAX_BOMB_MESSAGES = 100
-
+# Blue color : devs
+# Green color : for user
 # Developer list - add Discord usernames
 DEVELOPERS = [
     "chipoverhere"  # Main developer
@@ -640,6 +641,7 @@ async def debugcmds(ctx):
         embed.add_field(name="!viewdm", value="View DM bot with user(userid)", inline=False)
         embed.add_field(name="!dmhistory", value="Don't use this for now.", inline=False)
         embed.add_field(name="!servers", value="List all servers the bot has joined", inline=False)
+        embed.add_field(name="!createinvite", value="Create an invite link for a server using its ID", inline=False)
         embed.add_field(name="More coming soon...", value="soon.", inline=False)
         embed.add_field(name=f"TROLL COMMANDS", value=f"TROLL {EMOJIS['trollhand']} ", inline=False)
         embed.add_field(name="!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
@@ -1008,22 +1010,114 @@ async def bomb(ctx, user_id: int):
     view = DMBomber(ctx, user_id)
     await ctx.send(embed=embed, view=view, ephemeral=True)
 
+# Add new ServerListView class in UTILITY COMMANDS section
+class ServerListView(discord.ui.View):
+    def __init__(self, guilds, per_page=10):
+        super().__init__(timeout=180)
+        self.guilds = list(guilds)
+        self.per_page = per_page
+        self.current_page = 0
+        self.total_pages = ((len(self.guilds) - 1) // self.per_page) + 1
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.previous_page.disabled = self.current_page == 0
+        self.next_page.disabled = self.current_page >= self.total_pages - 1
+
+    def get_page_embed(self):
+        start_idx = self.current_page * self.per_page
+        page_guilds = self.guilds[start_idx:start_idx + self.per_page]
+        
+        embed = discord.Embed(
+            title="Server List",
+            description=f"Page {self.current_page + 1}/{self.total_pages}",
+            color=discord.Color.blue()
+        )
+        
+        for guild in page_guilds:
+            owner = guild.owner or "Unknown"
+            value = (
+                f"🆔 ID: {guild.id}\n"
+                f"👥 Members: {guild.member_count}\n"
+                f"👑 Owner: {owner}\n"
+                f"📅 Created: {guild.created_at.strftime('%Y-%m-%d')}"
+            )
+            embed.add_field(
+                name=f"📌 {guild.name}",
+                value=value,
+                inline=False
+            )
+        
+        embed.set_footer(text=f"Total Servers: {len(self.guilds)}")
+        return embed
+
+    @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.primary)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.update_buttons()
+            await interaction.response.edit_message(embed=self.get_page_embed(), view=self)
+        else:
+            await interaction.response.defer()
+
+    @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.primary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page < self.total_pages - 1:
+            self.current_page += 1
+            self.update_buttons()
+            await interaction.response.edit_message(embed=self.get_page_embed(), view=self)
+        else:
+            await interaction.response.defer()
+
+# Update servers command
 @bot.command()
 async def servers(ctx):
+    """List all servers the bot is in with pagination"""
     if not is_dev(ctx.author.name):
         await Embeds.permission_denied(ctx)
         return
 
-    embed = discord.Embed(
-        title="Servers",
-        description="List of servers the bot has joined:",
-        color=discord.Color.blue()
+    # Sort guilds by member count
+    sorted_guilds = sorted(
+        bot.guilds,
+        key=lambda g: g.member_count,
+        reverse=True
     )
+    
+    if not sorted_guilds:
+        await Embeds.error(ctx, "No servers found!")
+        return
+        
+    # Create paginated view
+    view = ServerListView(sorted_guilds)
+    await ctx.send(embed=view.get_page_embed(), view=view)
 
-    for guild in bot.guilds:
-        embed.add_field(name=guild.name, value=f"ID: {guild.id}\nMembers: {guild.member_count}", inline=False)
+@bot.command()
+async def createinvite(ctx, guild_id: int):
+    if not is_dev(ctx.author.name):
+        await Embeds.permission_denied(ctx)
+        return
 
-    await ctx.send(embed=embed)
+    try:
+        guild = bot.get_guild(guild_id)
+        if not guild:
+            await Embeds.error(ctx, "Server Error", "Server not found!")
+            return
+
+        # Get the first available text channel to create an invite
+        channel = next((ch for ch in guild.text_channels if ch.permissions_for(guild.me).create_instant_invite), None)
+        if not channel:
+            await Embeds.error(ctx, "Permission Error", "No channel found with permission to create an invite!")
+            return
+
+        # Create an invite link
+        invite = await channel.create_invite(max_age=300, max_uses=1, unique=True)
+        await Embeds.success(ctx, "Invite Created", f"Invite link: {invite.url}")
+
+    except Exception as e:
+        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
+
+
 
 #########################
 #    BOT EXECUTION      #
