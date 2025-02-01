@@ -27,6 +27,15 @@ DEVELOPERS = [
   #  "dev3name"       # Add more devs here
 ]
 
+# Colors for consistency
+COLORS = {
+    'success': discord.Color.green(),
+    'error': discord.Color.red(),
+    'warning': discord.Color.gold(),
+    'info': discord.Color.blue(),
+    'dev': discord.Color.purple()
+}
+
 # Load tokens
 with open("token.txt", "r") as file:
     TOKEN = file.read().strip()
@@ -932,6 +941,7 @@ class DMBomber(discord.ui.View):
         self.ctx = ctx
         self.user_id = user_id
         self.rate_limiter = DMRateLimiter()
+        self.messages_sent = 0  # Add counter for messages
 
     @discord.ui.button(label="START BOMBING 💣", style=discord.ButtonStyle.danger)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -952,6 +962,7 @@ class DMBomber(discord.ui.View):
         try:
             user = await bot.fetch_user(self.user_id)
             dm_cooldowns[self.user_id] = datetime.now().timestamp() + BOMB_COOLDOWN
+            start_time = datetime.now()
             
             for i in range(MAX_BOMB_MESSAGES):
                 try:
@@ -962,6 +973,7 @@ class DMBomber(discord.ui.View):
                         color=discord.Color.red()
                     )
                     await user.send(embed=embed)
+                    self.messages_sent += 1
                 except discord.Forbidden:
                     await interaction.followup.send(
                         embed=Embeds.create_base(
@@ -975,6 +987,35 @@ class DMBomber(discord.ui.View):
                 except Exception as e:
                     print(f"Error in bomb command: {e}")
                     break
+
+            # Calculate bombing stats
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            
+            # Create completion embed
+            completion_embed = discord.Embed(
+                title=f"💣 Bombing Complete {EMOJIS['alert']}",
+                description=f"Target: {user.mention}",
+                color=COLORS['dev']
+            )
+            completion_embed.add_field(
+                name="Stats", 
+                value=f"```\n"
+                      f"Messages Sent: {self.messages_sent}/{MAX_BOMB_MESSAGES}\n"
+                      f"Duration: {duration:.2f}s\n"
+                      f"Rate: {self.messages_sent/duration:.2f} msgs/sec\n"
+                      f"Success Rate: {(self.messages_sent/MAX_BOMB_MESSAGES)*100:.1f}%\n"
+                      f"```",
+                inline=False
+            )
+            completion_embed.add_field(
+                name="Cooldown", 
+                value=f"Target is now on cooldown for {BOMB_COOLDOWN/60:.1f} minutes",
+                inline=False
+            )
+            completion_embed.set_footer(text=f"Bombing executed by {interaction.user.name}")
+            
+            await interaction.channel.send(embed=completion_embed)
                     
         except Exception as e:
             await Embeds.error(interaction, f"Failed to bomb user: {str(e)}")
@@ -1010,19 +1051,32 @@ async def bomb(ctx, user_id: int):
     view = DMBomber(ctx, user_id)
     await ctx.send(embed=embed, view=view, ephemeral=True)
 
-# Add new ServerListView class in UTILITY COMMANDS section
-class ServerListView(discord.ui.View):
-    def __init__(self, guilds, per_page=10):
-        super().__init__(timeout=180)
-        self.guilds = list(guilds)
-        self.per_page = per_page
+class PaginatedView(discord.ui.View):
+    """Base class for paginated views"""
+    def __init__(self, timeout=180):
+        super().__init__(timeout=timeout)
         self.current_page = 0
-        self.total_pages = ((len(self.guilds) - 1) // self.per_page) + 1
-        self.update_buttons()
+        self.message = None
 
     def update_buttons(self):
-        self.previous_page.disabled = self.current_page == 0
-        self.next_page.disabled = self.current_page >= self.total_pages - 1
+        """Update button states based on current page"""
+        raise NotImplementedError
+
+    async def update_message(self, interaction: discord.Interaction):
+        """Update message with new page content"""
+        if not self.message:
+            self.message = await interaction.message.edit(embed=self.get_page_embed(), view=self)
+        else:
+            await interaction.message.edit(embed=self.get_page_embed(), view=self)
+
+class ServerListView(PaginatedView):
+    """View for server list pagination"""
+    def __init__(self, guilds, per_page=10):
+        super().__init__()
+        self.guilds = sorted(guilds, key=lambda g: g.member_count, reverse=True)
+        self.per_page = per_page
+        self.total_pages = ((len(self.guilds) - 1) // self.per_page) + 1
+        self.update_buttons()
 
     def get_page_embed(self):
         start_idx = self.current_page * self.per_page
@@ -1031,16 +1085,17 @@ class ServerListView(discord.ui.View):
         embed = discord.Embed(
             title="Server List",
             description=f"Page {self.current_page + 1}/{self.total_pages}",
-            color=discord.Color.blue()
+            color=COLORS['dev']
         )
         
         for guild in page_guilds:
             owner = guild.owner or "Unknown"
             value = (
                 f"🆔 ID: {guild.id}\n"
-                f"👥 Members: {guild.member_count}\n"
+                f"👥 Members: {guild.member_count:,}\n"  # Add comma formatting
                 f"👑 Owner: {owner}\n"
-                f"📅 Created: {guild.created_at.strftime('%Y-%m-%d')}"
+                f"📅 Created: {guild.created_at.strftime('%Y-%m-%d')}\n"
+                f"🌐 Region: {str(guild.preferred_locale).split('.')[1]}"
             )
             embed.add_field(
                 name=f"📌 {guild.name}",
@@ -1048,26 +1103,37 @@ class ServerListView(discord.ui.View):
                 inline=False
             )
         
-        embed.set_footer(text=f"Total Servers: {len(self.guilds)}")
+        embed.set_footer(text=f"Total Servers: {len(self.guilds):,}")
+        if self.guilds[0].icon:
+            embed.set_thumbnail(url=self.guilds[0].icon.url)
         return embed
 
-    @discord.ui.button(label="◀️ Previous", style=discord.ButtonStyle.primary)
+    def update_buttons(self):
+        """Update navigation button states"""
+        self.previous_page.disabled = self.current_page <= 0
+        self.next_page.disabled = self.current_page >= self.total_pages - 1
+
+    @discord.ui.button(label="◀️", style=discord.ButtonStyle.primary)
     async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page > 0:
             self.current_page -= 1
             self.update_buttons()
-            await interaction.response.edit_message(embed=self.get_page_embed(), view=self)
-        else:
-            await interaction.response.defer()
+            await self.update_message(interaction)
+        await interaction.response.defer()
 
-    @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="▶️", style=discord.ButtonStyle.primary)
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.current_page < self.total_pages - 1:
             self.current_page += 1
             self.update_buttons()
-            await interaction.response.edit_message(embed=self.get_page_embed(), view=self)
-        else:
-            await interaction.response.defer()
+            await self.update_message(interaction)
+        await interaction.response.defer()
+
+    @discord.ui.button(label="🔄", style=discord.ButtonStyle.secondary)
+    async def refresh(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Refresh the current page"""
+        await self.update_message(interaction)
+        await interaction.response.defer()
 
 # Update servers command
 @bot.command()
@@ -1077,19 +1143,12 @@ async def servers(ctx):
         await Embeds.permission_denied(ctx)
         return
 
-    # Sort guilds by member count
-    sorted_guilds = sorted(
-        bot.guilds,
-        key=lambda g: g.member_count,
-        reverse=True
-    )
-    
-    if not sorted_guilds:
+    guilds = bot.guilds
+    if not guilds:
         await Embeds.error(ctx, "No servers found!")
         return
-        
-    # Create paginated view
-    view = ServerListView(sorted_guilds)
+
+    view = ServerListView(guilds)
     await ctx.send(embed=view.get_page_embed(), view=view)
 
 @bot.command()
