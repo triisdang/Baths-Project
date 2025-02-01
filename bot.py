@@ -1091,12 +1091,15 @@ class ServerListView(PaginatedView):
         
         for guild in page_guilds:
             owner = guild.owner or "Unknown"
+            locale = str(guild.preferred_locale)
+            if '.' in locale:
+                locale = locale.split('.')[1]
             value = (
                 f"🆔 ID: {guild.id}\n"
                 f"👥 Members: {guild.member_count:,}\n"  # Add comma formatting
                 f"👑 Owner: {owner}\n"
                 f"📅 Created: {guild.created_at.strftime('%Y-%m-%d')}\n"
-                f"🌐 Region: {str(guild.preferred_locale).split('.')[1]}"
+                f"🌐 Region: {locale}"
             )
             embed.add_field(
                 name=f"📌 {guild.name}",
