@@ -483,6 +483,14 @@ class RussianRouletteButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=180)
         self.game = RussianRouletteGame()
+        self.message = None  # Store the message reference
+
+    async def update_message(self, interaction: discord.Interaction):
+        """Updates the game message with current state"""
+        if not self.message:
+            self.message = await interaction.message.edit(embed=self.game.get_status_embed(), view=self)
+        else:
+            await interaction.message.edit(embed=self.game.get_status_embed(), view=self)
 
     @discord.ui.button(label="Join Game", style=discord.ButtonStyle.primary)
     async def join_game(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -631,6 +639,7 @@ async def debugcmds(ctx):
         embed.add_field(name="!allowdmai", value="True/False, Use for letting the user use ai in DMs", inline=False)
         embed.add_field(name="!viewdm", value="View DM bot with user(userid)", inline=False)
         embed.add_field(name="!dmhistory", value="Don't use this for now.", inline=False)
+        embed.add_field(name="!servers", value="List all servers the bot has joined", inline=False)
         embed.add_field(name="More coming soon...", value="soon.", inline=False)
         embed.add_field(name=f"TROLL COMMANDS", value=f"TROLL {EMOJIS['trollhand']} ", inline=False)
         embed.add_field(name="!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
@@ -998,6 +1007,23 @@ async def bomb(ctx, user_id: int):
     
     view = DMBomber(ctx, user_id)
     await ctx.send(embed=embed, view=view, ephemeral=True)
+
+@bot.command()
+async def servers(ctx):
+    if not is_dev(ctx.author.name):
+        await Embeds.permission_denied(ctx)
+        return
+
+    embed = discord.Embed(
+        title="Servers",
+        description="List of servers the bot has joined:",
+        color=discord.Color.blue()
+    )
+
+    for guild in bot.guilds:
+        embed.add_field(name=guild.name, value=f"ID: {guild.id}\nMembers: {guild.member_count}", inline=False)
+
+    await ctx.send(embed=embed)
 
 #########################
 #    BOT EXECUTION      #
