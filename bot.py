@@ -79,9 +79,12 @@ class Embeds:
             title="Error",
             description=message,
             color=discord.Color.red(),
-            author=ctx.author
+            author=ctx.author if hasattr(ctx, 'author') else None
         )
-        await ctx.send(embed=embed)
+        if isinstance(ctx, discord.Interaction):
+            await ctx.response.send_message(embed=embed, ephemeral=True)
+        else:
+            await ctx.send(embed=embed)
 
     @staticmethod
     async def success(ctx, title, description):
@@ -631,7 +634,7 @@ async def cmds(ctx):
     embed.add_field(name="!funuser", value="Make fun of a user's name!", inline=False)
     embed.add_field(name="!random", value="Get a random word!", inline=False)
     embed.add_field(name="!invite", value="Invite the bot to your server!", inline=False)
-    embed.set_footer(text="Bot by Chipoverhere " + EMOJIS['cutecat'] + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
+    embed.set_footer(text="V1.2 Bot by Chipoverhere " + EMOJIS['cutecat'] + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     embed.set_thumbnail(url=bot.user.avatar.url)
     await ctx.send(embed=embed)
 
@@ -658,6 +661,7 @@ async def debugcmds(ctx):
         embed.add_field(name="!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
         embed.add_field(name="!megaping", value=f"Don't you dare try it. {EMOJIS['fling']}", inline=False)
         embed.add_field(name="More coming soon...", value="soon.", inline=False)
+        embed.set_footer(text="V1.2 Bot by Chipoverhere " + EMOJIS['cutecat'] + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
         embed.set_thumbnail(url=bot.user.avatar.url)
         await ctx.send(embed=embed)
     else : 
@@ -874,7 +878,7 @@ async def viewroblox(ctx, user_id: int):
         # Fetch user info
         user_info = requests.get(f"{ROBLOX_API_URL}{user_id}").json()
         if 'Username' not in user_info:
-            await Embeds.error(ctx, "Error", "User not found!")
+            await Embeds.error(ctx, "User not found!")
             return
         
         username = user_info['Username']
@@ -908,8 +912,10 @@ async def viewroblox(ctx, user_id: int):
         
         await ctx.send(embed=embed)
         
+    except requests.exceptions.RequestException as e:
+        await Embeds.error(ctx, f"Connection error: {str(e)}")
     except Exception as e:
-        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
+        await Embeds.error(ctx, f"An error occurred: {str(e)}")
 
 @bot.command()
 async def dmhistory(ctx, user_id: int = None):
@@ -1062,6 +1068,7 @@ class DMBomber(discord.ui.View):
             completion_embed.set_footer(text=f"Bombing executed by {interaction.user.name}")
             
             await interaction.channel.send(embed=completion_embed)
+            await interaction.followup.send("https://i.giphy.com/XUFPGrX5Zis6Y.webp", ephemeral=True)
                     
         except Exception as e:
             await Embeds.error(interaction, f"Failed to bomb user: {str(e)}")
