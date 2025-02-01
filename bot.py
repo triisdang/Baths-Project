@@ -313,17 +313,17 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
         
     # Check ban permissions after dev check
     if not ctx.author.guild_permissions.ban_members:
-        await Embeds.error(ctx, "Error", "You need ban permissions to use this command!")
+        await Embeds.error(ctx, "You need ban permissions to use this command!")
         return
         
     # Check if bot has ban permissions
     if not ctx.guild.me.guild_permissions.ban_members:
-        await Embeds.error(ctx, "Bot Error", "I don't have permission to ban members!")
+        await Embeds.error(ctx, "I don't have permission to ban members!")
         return
         
     # Check if target is bannable
     if not member.bannable:
-        await Embeds.error(ctx, "Error", "I cannot ban this user! They might have higher permissions than me.")
+        await Embeds.error(ctx, "I cannot ban this user! They might have higher permissions than me.")
         return
         
     try:
@@ -354,9 +354,9 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
         await ctx.send(embed=embed)
         
     except discord.Forbidden:
-        await Embeds.error(ctx, "Error", "I don't have permission to ban this user!")
+        await Embeds.error(ctx, "I don't have permission to ban this user!")
     except Exception as e:
-        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
+        await Embeds.error(ctx, f"An error occurred: {str(e)}")
 
 @bot.command()
 async def unban(ctx, user_id: int, *, reason="No reason provided"):
@@ -376,14 +376,14 @@ async def unban(ctx, user_id: int, *, reason="No reason provided"):
         
     # Check if bot has ban permissions
     if not ctx.guild.me.guild_permissions.ban_members:
-        await Embeds.error(ctx, "Bot Error", "I don't have permission to unban members!")
+        await Embeds.error(ctx, "I don't have permission to unban members!")
         return
         
     try:
         # Fetch the ban entry
         ban_entry = await ctx.guild.fetch_ban(discord.Object(id=user_id))
         if not ban_entry:
-            await Embeds.error(ctx, "Error", "This user is not banned!")
+            await Embeds.error(ctx, "This user is not banned!")
             return
             
         # Create unban confirmation embed
@@ -401,11 +401,11 @@ async def unban(ctx, user_id: int, *, reason="No reason provided"):
         await ctx.send(embed=embed)
         
     except discord.NotFound:
-        await Embeds.error(ctx, "Error", "User not found or not banned!")
+        await Embeds.error(ctx, "User not found or not banned!")
     except discord.Forbidden:
-        await Embeds.error(ctx, "Error", "I don't have permission to unban users!")
+        await Embeds.error(ctx, "I don't have permission to unban users!")
     except Exception as e:
-        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
+        await Embeds.error(ctx, f"An error occurred: {str(e)}")
 
 #########################
 #    VOICE COMMANDS     #
@@ -422,7 +422,7 @@ async def join(ctx):
     # Get the voice channel the user is in
     channel = ctx.author.voice.channel
 
-    # Connect to the voice channel
+    # Connect to the voice channel  
     await channel.connect()
     await Embeds.success(ctx, "Voice Channel", f"Joined {channel.name}!")
 
@@ -1005,11 +1005,11 @@ class DMBomber(discord.ui.View):
         if not can_send:
             await interaction.response.send_message(
                 f"Target is on cooldown. Try again in {wait_time} seconds.", 
-                ephemeral=True
+                ephemeral=False
             )
             return
 
-        await interaction.response.send_message("Starting bomb...", ephemeral=True)
+        await interaction.response.send_message("Starting bomb...", ephemeral=False)
         
         try:
             user = await bot.fetch_user(self.user_id)
@@ -1033,7 +1033,7 @@ class DMBomber(discord.ui.View):
                             description="Cannot send DMs to this user!",
                             color=discord.Color.red()
                         ),
-                        ephemeral=True
+                        ephemeral=False
                     )
                     break
                 except Exception as e:
@@ -1068,7 +1068,7 @@ class DMBomber(discord.ui.View):
             completion_embed.set_footer(text=f"Bombing executed by {interaction.user.name}")
             
             await interaction.channel.send(embed=completion_embed)
-            await interaction.followup.send("https://i.giphy.com/XUFPGrX5Zis6Y.webp", ephemeral=True)
+            await interaction.followup.send("https://i.giphy.com/XUFPGrX5Zis6Y.webp", ephemeral=False)
                     
         except Exception as e:
             await Embeds.error(interaction, f"Failed to bomb user: {str(e)}")
@@ -1102,7 +1102,7 @@ async def bomb(ctx, user_id: int):
     )
     
     view = DMBomber(ctx, user_id)
-    await ctx.send(embed=embed, view=view, ephemeral=True)
+    await ctx.send(embed=embed, view=view, ephemeral=False)
 
 class PaginatedView(discord.ui.View):
     """Base class for paginated views"""
@@ -1143,12 +1143,13 @@ class ServerListView(PaginatedView):
         
         for guild in page_guilds:
             owner = guild.owner or "Unknown"
+            locale = str(guild.preferred_locale).split('.')[1] if '.' in str(guild.preferred_locale) else str(guild.preferred_locale)
             value = (
                 f"🆔 ID: {guild.id}\n"
                 f"👥 Members: {guild.member_count:,}\n"  # Add comma formatting
                 f"👑 Owner: {owner}\n"
                 f"📅 Created: {guild.created_at.strftime('%Y-%m-%d')}\n"
-                f"🌐 Region: {str(guild.preferred_locale).split('.')[1]}"
+                f"🌐 Region: {locale}"
             )
             embed.add_field(
                 name=f"📌 {guild.name}",
