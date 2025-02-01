@@ -322,7 +322,7 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
         return
         
     # Check if target is bannable
-    if not member.bannable:
+    if member.top_role >= ctx.guild.me.top_role:
         await Embeds.error(ctx, "I cannot ban this user! They might have higher permissions than me.")
         return
         
@@ -363,13 +363,15 @@ async def unban(ctx, user_id: int, *, reason="No reason provided"):
     # Check if user has ban permissions
     if is_dev(ctx.author.name):
         embed = Embeds.create_base(
-        title="I know but!...",
-        description="I'm sorry",
-        color=discord.Color.red(),
-        author=ctx.author
-    )
-    embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
-    await ctx.send(embed=embed)
+            title="I know but!...",
+            description="I'm sorry",
+            color=discord.Color.red(),
+            author=ctx.author
+        )
+        embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
+        await ctx.send(embed=embed)
+        return
+
     if not ctx.author.guild_permissions.ban_members:
         await Embeds.permission_denied(ctx)
         return
@@ -874,9 +876,21 @@ async def invite(ctx):
 async def viewroblox(ctx, user_id: int):
     print(f'{ctx.author} just executed the viewroblox command.')
     
+    async def fetch_with_retries(url, retries=3, timeout=API_TIMEOUT):
+        for attempt in range(retries):
+            try:
+                response = requests.get(url, timeout=timeout)
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.RequestException as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                if attempt == retries - 1:
+                    raise
+                await asyncio.sleep(2)  # Wait before retrying
+
     try:
         # Fetch user info
-        user_info = requests.get(f"{ROBLOX_API_URL}{user_id}").json()
+        user_info = fetch_with_retries(f"{ROBLOX_API_URL}{user_id}")
         if 'Username' not in user_info:
             await Embeds.error(ctx, "User not found!")
             return
@@ -884,14 +898,14 @@ async def viewroblox(ctx, user_id: int):
         username = user_info['Username']
         
         # Fetch friends count
-        friends_count = requests.get(f"{ROBLOX_API_URL}{user_id}/friends/count").json().get('count', 0)
+        friends_count = fetch_with_retries(f"{ROBLOX_API_URL}{user_id}/friends/count").get('count', 0)
         
         # Fetch badges count
-        badges_count = requests.get(f"https://badges.roblox.com/v1/users/{user_id}/badges").json().get('data', [])
+        badges_count = fetch_with_retries(f"https://badges.roblox.com/v1/users/{user_id}/badges").get('data', [])
         badges_count = len(badges_count)
         
         # Fetch followers count
-        followers_count = requests.get(f"https://friends.roblox.com/v1/users/{user_id}/followers/count").json().get('count', 0)
+        followers_count = fetch_with_retries(f"https://friends.roblox.com/v1/users/{user_id}/followers/count").get('count', 0)
         
         # Fetch avatar thumbnail
         avatar_url = f"https://www.roblox.com/headshot-thumbnail/image?userId={user_id}&width=420&height=420&format=png"
