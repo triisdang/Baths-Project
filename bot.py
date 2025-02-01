@@ -299,18 +299,7 @@ async def on_ready():
 
 @bot.command()
 async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
-    # Check if user is dev first
-    if not is_dev(ctx.author.name):
-        embed = Embeds.create_base(
-            title="I know but!...",
-            description="I'm sorry",
-            color=discord.Color.red(),
-            author=ctx.author
-        )
-        embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
-        await ctx.send(embed=embed)
-        return
-        
+
     # Check ban permissions after dev check
     if not ctx.author.guild_permissions.ban_members:
         await Embeds.error(ctx, "You need ban permissions to use this command!")
@@ -361,16 +350,6 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
 @bot.command()
 async def unban(ctx, user_id: int, *, reason="No reason provided"):
     # Check if user has ban permissions
-    if is_dev(ctx.author.name):
-        embed = Embeds.create_base(
-            title="I know but!...",
-            description="I'm sorry",
-            color=discord.Color.red(),
-            author=ctx.author
-        )
-        embed.add_field(name="I mean....", value="You're my owner, but you don't have permission to use this command, so sorry.", inline=False)
-        await ctx.send(embed=embed)
-        return
 
     if not ctx.author.guild_permissions.ban_members:
         await Embeds.permission_denied(ctx)
