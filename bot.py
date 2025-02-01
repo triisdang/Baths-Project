@@ -11,7 +11,7 @@ from typing import Optional
 #########################
 #       CONSTANTS       #
 #########################
-
+ROBLOX_API_URL = "https://api.roblox.com/users/"
 COMMAND_PREFIX = "!"
 MAX_DM_HISTORY = 50
 API_TIMEOUT = 30
@@ -627,6 +627,7 @@ async def cmds(ctx):
     embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
     embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
     embed.add_field(name="!ai", value="Talk to Groq's API!", inline=False)
+    embed.add_field(name="!viewroblox", value="View Roblox user info by user ID", inline=False)
     embed.add_field(name="!funuser", value="Make fun of a user's name!", inline=False)
     embed.add_field(name="!random", value="Get a random word!", inline=False)
     embed.add_field(name="!invite", value="Invite the bot to your server!", inline=False)
@@ -865,6 +866,50 @@ async def invite(ctx):
         embed.add_field(name="Invite Link", value="[Invite Link](https://bathsbot.vercel.app/)", inline=False)
     
         await ctx.send(embed=embed)
+@bot.command()
+async def viewroblox(ctx, user_id: int):
+    print(f'{ctx.author} just executed the viewroblox command.')
+    
+    try:
+        # Fetch user info
+        user_info = requests.get(f"{ROBLOX_API_URL}{user_id}").json()
+        if 'Username' not in user_info:
+            await Embeds.error(ctx, "Error", "User not found!")
+            return
+        
+        username = user_info['Username']
+        
+        # Fetch friends count
+        friends_count = requests.get(f"{ROBLOX_API_URL}{user_id}/friends/count").json().get('count', 0)
+        
+        # Fetch badges count
+        badges_count = requests.get(f"https://badges.roblox.com/v1/users/{user_id}/badges").json().get('data', [])
+        badges_count = len(badges_count)
+        
+        # Fetch followers count
+        followers_count = requests.get(f"https://friends.roblox.com/v1/users/{user_id}/followers/count").json().get('count', 0)
+        
+        # Fetch avatar thumbnail
+        avatar_url = f"https://www.roblox.com/headshot-thumbnail/image?userId={user_id}&width=420&height=420&format=png"
+        
+        # Create embed
+        embed = discord.Embed(
+            title=f"Roblox User Info - {username}",
+            description=f"Here is the information for Roblox user {username}:",
+            color=discord.Color.blue()
+        )
+        embed.set_thumbnail(url=avatar_url)
+        embed.add_field(name="Username", value=username, inline=True)
+        embed.add_field(name="User ID", value=user_id, inline=True)
+        embed.add_field(name="Friends Count", value=friends_count, inline=True)
+        embed.add_field(name="Badges Count", value=badges_count, inline=True)
+        embed.add_field(name="Followers Count", value=followers_count, inline=True)
+        embed.set_footer(text=f"Requested by {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
+        
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
 
 @bot.command()
 async def dmhistory(ctx, user_id: int = None):
@@ -1091,15 +1136,12 @@ class ServerListView(PaginatedView):
         
         for guild in page_guilds:
             owner = guild.owner or "Unknown"
-            locale = str(guild.preferred_locale)
-            if '.' in locale:
-                locale = locale.split('.')[1]
             value = (
                 f"🆔 ID: {guild.id}\n"
                 f"👥 Members: {guild.member_count:,}\n"  # Add comma formatting
                 f"👑 Owner: {owner}\n"
                 f"📅 Created: {guild.created_at.strftime('%Y-%m-%d')}\n"
-                f"🌐 Region: {locale}"
+                f"🌐 Region: {str(guild.preferred_locale).split('.')[1]}"
             )
             embed.add_field(
                 name=f"📌 {guild.name}",
