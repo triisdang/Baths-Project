@@ -1,6 +1,6 @@
 import os
 import subprocess
-
+#   SERVER ONLY
 # Define the repository URL and the directory where the project is located
 REPO_URL = "https://github.com/triisdang/Baths-Project.git"
 PROJECT_DIR = "Bath-Project"
