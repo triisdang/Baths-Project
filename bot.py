@@ -646,6 +646,7 @@ async def debugcmds(ctx):
         embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
         embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
         embed.add_field(name="!senddm", value="Send DM to a user.(userid)", inline=False)
+        embed.add_field(name="!changestate", value="Change bot status and activity.", inline=False)
         embed.add_field(name="!allowdmai", value="True/False, Use for letting the user use ai in DMs", inline=False)
         embed.add_field(name="!viewdm", value="View DM bot with user(userid)", inline=False)
         embed.add_field(name="!dmhistory", value="Don't use this for now.", inline=False)
