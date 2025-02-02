@@ -13,7 +13,7 @@ from groq import Groq
 #       CONSTANTS       #
 #########################
 ROBLOX_API_URL = "https://api.roblox.com/users/"
-COMMAND_PREFIX = "!"
+COMMAND_PREFIX = "B!"
 MAX_DM_HISTORY = 50
 API_TIMEOUT = 30
 BOMB_COOLDOWN = 300
@@ -130,7 +130,7 @@ async def generate_response(prompt, conversation_history=None, attachments=None)
         
         # Add conversation history
         if conversation_history:
-            for role, content in conversation_history:
+            for timestamp, role, content in conversation_history:
                 messages.append({
                     "role": "user" if role == "User" else "assistant",
                     "content": content
@@ -294,7 +294,7 @@ async def on_message(message):
 
 @bot.event
 async def on_ready():
-    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | !cmds")
+    activity = discord.Activity(type=discord.ActivityType.listening, name="for help | B!cmds")
     await bot.change_presence(status=discord.Status.online, activity=activity)
     print(f'I am ready! My name is {bot.user}!')
     print("This bot by Chipoverhere on discord, triisdang on github. Please dont revome this message.")
@@ -588,7 +588,7 @@ async def funuser(ctx, member: discord.Member):
         response = await generate_response("Make this user name funny (please cook the name into something really funny and meme. also, be mean too.): " + member.display_name)
         # Split the response into chunks of 2000 characters
         for i in range(0, len(response), 2000):
-            await ctx.send(response[i:i+2000])
+            await ctx.send(response[i+i+2000])
         await ctx.send("Requested by " + ctx.author.mention)
 
 #########################
