@@ -37,7 +37,7 @@ Make sure these option are enabled
 
  Copy the discord bot token and paste it into token.txt
 
-## Setup Groq AI (Important)
+## Setup Groq AI (Important & Free) 
  Goto [Groq dashbroad](https://console.groq.com/login) and create an account
 
  Goto [Groq api key](https://console.groq.com/keys), Click create an API key
