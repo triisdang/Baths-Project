@@ -65,7 +65,7 @@ If you ran into some random error, please use chatgpt cuz im lazy :(
  - [Discord Dev](https://discord.com/developers/applications)
  - [Groq Token](https://console.groq.com/keys)
  - [Groq dashbroad](https://console.groq.com/login)    
- - [Chatgpt]("https://chatgpt.com")
+ - [Chatgpt](https://chatgpt.com)
  
 ## Authors
 
@@ -74,5 +74,5 @@ If you ran into some random error, please use chatgpt cuz im lazy :(
 
 ## License
 
-[MIT]("https://raw.githubusercontent.com/triisdang/Baths-Project/refs/heads/main/LICENSE")
+[MIT](https://raw.githubusercontent.com/triisdang/Baths-Project/refs/heads/main/LICENSE)
 
