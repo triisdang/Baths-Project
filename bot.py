@@ -569,7 +569,9 @@ async def russ(ctx):
 async def ai(ctx, *, prompt: str):
     print(f'{ctx.author} just executed the ai command.')
     attachments = ctx.message.attachments if ctx.message.attachments else None
-    response = await generate_response(prompt, ctx.author.id, attachments)
+    user_id = ctx.author.id
+    conversation_history = dm_history.get(user_id, [])
+    response = await generate_response(prompt, conversation_history, attachments)
     # Split the response into chunks of 2000 characters
     for i in range(0, len(response), 2000):
         await ctx.send(response[i:i+2000])
@@ -595,58 +597,58 @@ async def funuser(ctx, member: discord.Member):
 #   UTILITY COMMANDS    #
 #########################
 
-@bot.command()
+@bot.command(name="B!cmds")
 async def cmds(ctx):
-    print(f'{ctx.author} just executed the cmds command.')
+    print(f'{ctx.author} just executed the B!cmds command.')
     embed = discord.Embed(
         title="Bot Commands",
         description="Here are the commands you can use with this bot " + EMOJIS['catjam'] + " :",
         color=discord.Color.green()
     )
     embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
-    embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
-    embed.add_field(name="!whatisthisserver", value="Displays server information.", inline=False)
-    embed.add_field(name="!cmds", value="Displays this help message.", inline=False)
-    embed.add_field(name="!join", value="Join your voice channel you are in", inline=False)
-    embed.add_field(name="!leave", value="Leave voice channel [buggy]", inline=False)
-    embed.add_field(name="!play", value="Play an MP3 file in the voice channel [buggy]", inline=False)
-    embed.add_field(name="!userinfo", value="View user info of a user (tag them to view).", inline=False)
-    embed.add_field(name="!ban", value="Ban a user from the server (mention the user).", inline=False)
-    embed.add_field(name="!unban", value="Unban a user from the server (use userid).", inline=False)
+    embed.add_field(name="B!hello", value="Greets the user with 'Hello, world!'", inline=False)
+    embed.add_field(name="B!whatisthisserver", value="Displays server information.", inline=False)
+    embed.add_field(name="B!cmds", value="Displays this help message.", inline=False)
+    embed.add_field(name="B!join", value="Join your voice channel you are in", inline=False)
+    embed.add_field(name="B!leave", value="Leave voice channel [buggy]", inline=False)
+    embed.add_field(name="B!play", value="Play an MP3 file in the voice channel [buggy]", inline=False)
+    embed.add_field(name="B!userinfo", value="View user info of a user (tag them to view).", inline=False)
+    embed.add_field(name="B!ban", value="Ban a user from the server (mention the user).", inline=False)
+    embed.add_field(name="B!unban", value="Unban a user from the server (use userid).", inline=False)
     embed.add_field(name="FUN COMMANDS", value="Fun commands to try out:", inline=False)
-    embed.add_field(name="!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
-    embed.add_field(name="!russ", value="Play Russian roulette with friends!", inline=False)
-    embed.add_field(name="!ai", value="Talk to Groq's API!", inline=False)
-    embed.add_field(name="!viewroblox", value="View Roblox user info by user ID", inline=False)
-    embed.add_field(name="!funuser", value="Make fun of a user's name!", inline=False)
-    embed.add_field(name="!random", value="Get a random word!", inline=False)
-    embed.add_field(name="!invite", value="Invite the bot to your server!", inline=False)
+    embed.add_field(name="B!steelcredit", value="Try if you dare... (tag your best friend :) )", inline=False)
+    embed.add_field(name="B!russ", value="Play Russian roulette with friends!", inline=False)
+    embed.add_field(name="B!ai", value="Talk to Groq's API!", inline=False)
+    embed.add_field(name="B!viewroblox", value="View Roblox user info by user ID", inline=False)
+    embed.add_field(name="B!funuser", value="Make fun of a user's name!", inline=False)
+    embed.add_field(name="B!random", value="Get a random word!", inline=False)
+    embed.add_field(name="B!invite", value="Invite the bot to your server!", inline=False)
     embed.set_footer(text="V1.2 Bot by Chipoverhere " + EMOJIS['cutecat'] + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
     embed.set_thumbnail(url=bot.user.avatar.url)
     await ctx.send(embed=embed)
 
-@bot.command()
+@bot.command(name="B!debugcmds")
 async def debugcmds(ctx):
     if is_dev(ctx.author.name):
-        print(f'{ctx.author} just executed the cmds command.')
+        print(f'{ctx.author} just executed the B!debugcmds command.')
         embed = discord.Embed(
             title="Bot Debug Commands",
             description="Developer Commands " + EMOJIS['trollhand'] + " :",
             color=discord.Color.green()
         )
         embed.set_author(name=f"Requested by: {ctx.author.display_name}", icon_url=ctx.author.avatar.url)
-        embed.add_field(name="!hello", value="Greets the user with 'Hello, world!'", inline=False)
-        embed.add_field(name="!senddm", value="Send DM to a user.(userid)", inline=False)
-        embed.add_field(name="!changestate", value="Change bot status and activity.", inline=False)
-        embed.add_field(name="!allowdmai", value="True/False, Use for letting the user use ai in DMs", inline=False)
-        embed.add_field(name="!viewdm", value="View DM bot with user(userid)", inline=False)
-        embed.add_field(name="!dmhistory", value="Don't use this for now.", inline=False)
-        embed.add_field(name="!servers", value="List all servers the bot has joined", inline=False)
-        embed.add_field(name="!createinvite", value="Create an invite link for a server using its ID", inline=False)
+        embed.add_field(name="B!hello", value="Greets the user with 'Hello, world!'", inline=False)
+        embed.add_field(name="B!senddm", value="Send DM to a user.(userid)", inline=False)
+        embed.add_field(name="B!changestate", value="Change bot status and activity.", inline=False)
+        embed.add_field(name="B!allowdmai", value="True/False, Use for letting the user use ai in DMs", inline=False)
+        embed.add_field(name="B!viewdm", value="View DM bot with user(userid)", inline=False)
+        embed.add_field(name="B!dmhistory", value="Don't use this for now.", inline=False)
+        embed.add_field(name="B!servers", value="List all servers the bot has joined", inline=False)
+        embed.add_field(name="B!createinvite", value="Create an invite link for a server using its ID", inline=False)
         embed.add_field(name="More coming soon...", value="soon.", inline=False)
         embed.add_field(name=f"TROLL COMMANDS", value=f"TROLL {EMOJIS['trollhand']} ", inline=False)
-        embed.add_field(name="!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
-        embed.add_field(name="!megaping", value=f"Don't you dare try it. {EMOJIS['fling']}", inline=False)
+        embed.add_field(name="B!bomb", value="Bomb a user with 100 message(in the future maybe this command is free to use)", inline=False)
+        embed.add_field(name="B!megaping", value=f"Don't you dare try it. {EMOJIS['fling']}", inline=False)
         embed.add_field(name="More coming soon...", value="soon.", inline=False)
         embed.set_footer(text="V1.2 Bot by Chipoverhere " + EMOJIS['cutecat'] + " [Github](https://github.com/triisdang/DSBOT)", icon_url=ctx.author.avatar.url)
         embed.set_thumbnail(url=bot.user.avatar.url)
@@ -875,7 +877,7 @@ async def viewroblox(ctx, user_id: int):
 
     try:
         # Fetch user info
-        user_info = fetch_with_retries(f"{ROBLOX_API_URL}{user_id}")
+        user_info = await fetch_with_retries(f"{ROBLOX_API_URL}{user_id}")
         if 'Username' not in user_info:
             await Embeds.error(ctx, "User not found!")
             return
@@ -883,17 +885,14 @@ async def viewroblox(ctx, user_id: int):
         username = user_info['Username']
         
         # Fetch friends count
-        friends_count = fetch_with_retries(f"{ROBLOX_API_URL}{user_id}/friends/count").get('count', 0)
+        friends_count = await fetch_with_retries(f"{ROBLOX_API_URL}{user_id}/friends/count").get('count', 0)
         
         # Fetch badges count
-        badges_count = fetch_with_retries(f"https://badges.roblox.com/v1/users/{user_id}/badges").get('data', [])
+        badges_count = await fetch_with_retries(f"https://badges.roblox.com/v1/users/{user_id}/badges").get('data', [])
         badges_count = len(badges_count)
         
         # Fetch followers count
-        followers_count = fetch_with_retries(f"https://friends.roblox.com/v1/users/{user_id}/followers/count").get('count', 0)
-        
-        # Fetch avatar thumbnail
-        avatar_url = f"https://www.roblox.com/headshot-thumbnail/image?userId={user_id}&width=420&height=420&format=png"
+        followers_count = await fetch_with_retries(f"https://friends.roblox.com/v1/users/{user_id}/followers/count").get('count', 0)
         
         # Create embed
         embed = discord.Embed(
@@ -901,7 +900,6 @@ async def viewroblox(ctx, user_id: int):
             description=f"Here is the information for Roblox user {username}:",
             color=discord.Color.blue()
         )
-        embed.set_thumbnail(url=avatar_url)
         embed.add_field(name="Username", value=username, inline=True)
         embed.add_field(name="User ID", value=user_id, inline=True)
         embed.add_field(name="Friends Count", value=friends_count, inline=True)
