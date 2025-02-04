@@ -8,6 +8,7 @@ import requests
 import json
 from typing import Optional
 from groq import Groq
+import time
 
 #########################
 #       CONSTANTS       #
