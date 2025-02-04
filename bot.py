@@ -19,6 +19,7 @@ API_TIMEOUT = 30
 BOMB_COOLDOWN = 300
 BOMB_RATE_LIMIT = 0.5
 MAX_BOMB_MESSAGES = 100
+DISCORD_API = "https://discord.com/api/v10/users/@me"
 # Blue color : devs
 # Green color : for user
 # Developer list - add Discord usernames
@@ -175,6 +176,23 @@ async def generate_response(prompt, conversation_history=None, attachments=None)
     except Exception as e:
         print(f"API Error: {e}")
         return "Sorry, I encountered an error while processing your request."
+
+def wait_for_unban(token):
+    headers = {"Authorization": f"Bot {token}"}
+    
+    while True:
+        response = requests.get(DISCORD_API, headers=headers)
+        
+        if response.status_code == 429:  # Still rate-limited
+            retry_after = int(response.headers.get("Retry-After", 300))  # Default 5 min
+            print(f"🚨 API Ban Active! Waiting {retry_after} seconds before retrying...")
+            time.sleep(retry_after)  # Wait before retrying
+        elif response.status_code == 200:  # API access restored
+            print("✅ API Unban Confirmed! Starting bot now 🎉")
+            break
+        else:
+            print(f"Unexpected response: {response.status_code} - {response.text}")
+            time.sleep(300)  # Default wait 5 min in case of unknown response
 
 #########################
 #      BOT SETUP        #
@@ -597,7 +615,7 @@ async def funuser(ctx, member: discord.Member):
 #   UTILITY COMMANDS    #
 #########################
 
-@bot.command(name="B!cmds")
+@bot.command(name="cmds")
 async def cmds(ctx):
     print(f'{ctx.author} just executed the B!cmds command.')
     embed = discord.Embed(
@@ -627,7 +645,7 @@ async def cmds(ctx):
     embed.set_thumbnail(url=bot.user.avatar.url)
     await ctx.send(embed=embed)
 
-@bot.command(name="B!debugcmds")
+@bot.command(name="debugcmds")
 async def debugcmds(ctx):
     if is_dev(ctx.author.name):
         print(f'{ctx.author} just executed the B!debugcmds command.')
@@ -1234,4 +1252,5 @@ async def createinvite(ctx, guild_id: int):
 #########################
 
 if __name__ == "__main__":
+    wait_for_unban(TOKEN)
     bot.run(TOKEN)
