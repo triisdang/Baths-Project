@@ -79,7 +79,7 @@ class Embeds:
     @staticmethod
     async def error(ctx, message):
         embed = Embeds.create_base(
-            title="Error",
+            title=f"Error{EMOJIS['x']}",
             description=message,
             color=discord.Color.red(),
             author=ctx.author if hasattr(ctx, 'author') else None
