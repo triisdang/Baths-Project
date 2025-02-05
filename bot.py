@@ -188,18 +188,13 @@ def wait_for_unban(token):
     
     while True:
         response = requests.get(DISCORD_API, headers=headers)
-        
-        if response.status_code == 429:  # Still rate-limited
-            retry_after = int(response.headers.get("Retry-After", 300))  # Default 5 min
+        if response.status_code == 429:  # Rate Limited
+            retry_after = int(response.headers.get("Retry-After", 60))  # Default to 60 seconds
             print(f"🚨 API Ban Active! Waiting {retry_after} seconds before retrying...")
-            time.sleep(retry_after)  # Wait before retrying
-        elif response.status_code == 200:  # API access restored
+            time.sleep(retry_after)
+        elif response.status_code == 200:  # Success
             print("✅ API Unban Confirmed! Starting bot now 🎉")
             break
-        else:
-            print(f"Unexpected response: {response.status_code} - {response.text}")
-            time.sleep(300)  # Default wait 5 min in case of unknown response
-
 #########################
 #      BOT SETUP        #
 #########################
@@ -1254,53 +1249,6 @@ async def createinvite(ctx, guild_id: int):
 
     except Exception as e:
         await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
-
-
-@bot.command()
-async def sendmessage(self, ctx, type: str = 'default', *, message: str):   
-    if not ctx.author.guild_permissions.administrator:
-        await Embeds.permission_denied(ctx)
-        return
-    try:
-        channel = bot.get_channel(channel_id)
-        if not isinstance(channel, discord.TextChannel):
-            await Embeds.error(ctx, "Channel Error", "Channel not found!")
-            return
-        if type is None:
-            await Embeds.error(ctx, "Type Error", "Type not found!")
-            await Embeds.info(ctx, "Tip : Use message type as 'message' or 'warn' or 'info' ")
-            return
-        if type == "message":
-            embed = discord.Embed(
-                title=title,
-                description=message,
-                color=discord.Color.green()
-            )
-            await channel.send(embed=embed)
-            await Embeds.success(ctx, "Message Sent", "Message sent successfully! ✅")
-        elif type == "warn":
-            embed = discord.Embed(
-                title=title,
-                description=message,
-                color=discord.Color.red()
-            )
-            await channel.send(embed=embed)
-            await Embeds.success(ctx, "Message Sent", "Message sent successfully! ✅")
-        elif type == "info":
-            embed = discord.Embed(
-                title=title,
-                description=message,
-                color=discord.Color.blue()
-            )
-            await channel.send(embed=embed)
-            await Embeds.success(ctx, "Message Sent", "Message sent successfully! ✅")
-        else:
-            await Embeds.error(ctx, "Type Error", "Type not found!")
-    except discord.Forbidden:
-        await Embeds.error(ctx, "Permission Error", "I don't have permission to send messages in that channel! 🚫")
-    except Exception as e:
-        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
-
 
 #########################
 #    BOT EXECUTION      #
