@@ -24,6 +24,11 @@ DISCORD_API = "https://discord.com/api/v10/users/@me"
 # Blue color : devs
 # Green color : for user
 # Developer list - add Discord usernames
+TESTSERVERS = {
+    "private": 1319293681282449438,
+}
+
+
 DEVELOPERS = [
     "chipoverhere"  # Main developer
  #   "dev2name",      # Add more devs here
@@ -211,6 +216,9 @@ dm_cooldowns = {}
 #########################
 #   HELPER FUNCTIONS    #
 #########################
+
+def is_test(guild: str) -> bool:
+    return guild in TESTSERVERS
 
 def is_dev(user_name: str) -> bool:
     """Check if a user is a developer"""
@@ -852,9 +860,10 @@ class MegaPingConfirmation(discord.ui.View):
         self.stop()
 
 @bot.command()
-async def megaping(ctx, member: discord.Member):
-    if not is_dev(ctx.author.name):
+async def megaping(ctx, member: discord.Member, guild):
+    if not is_dev(ctx.author.name) and not is_test(guild.id) :
         await Embeds.permission_denied(ctx)
+        await ctx.send("-# Only developers and in test servers can use this command!")
         return
     
     print(f'{ctx.author} initiated megaping confirmation for {member}')
@@ -1105,7 +1114,7 @@ class DMBomber(discord.ui.View):
 
 @bot.command()
 async def bomb(ctx, user_id: int):
-    if not is_dev(ctx.author.name):
+    if not is_dev(ctx.author.name) and is_test(ctx.guild.id):
         await Embeds.permission_denied(ctx)
         return
         
@@ -1246,6 +1255,51 @@ async def createinvite(ctx, guild_id: int):
     except Exception as e:
         await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
 
+
+@bot.command()
+async def sendmessage(self, ctx, type: str = 'default', *, message: str):   
+    if not ctx.author.guild_permissions.administrator:
+        await Embeds.permission_denied(ctx)
+        return
+    try:
+        channel = bot.get_channel(channel_id)
+        if not isinstance(channel, discord.TextChannel):
+            await Embeds.error(ctx, "Channel Error", "Channel not found!")
+            return
+        if type is None:
+            await Embeds.error(ctx, "Type Error", "Type not found!")
+            await Embeds.info(ctx, "Tip : Use message type as 'message' or 'warn' or 'info' ")
+            return
+        if type == "message":
+            embed = discord.Embed(
+                title=title,
+                description=message,
+                color=discord.Color.green()
+            )
+            await channel.send(embed=embed)
+            await Embeds.success(ctx, "Message Sent", "Message sent successfully! ✅")
+        elif type == "warn":
+            embed = discord.Embed(
+                title=title,
+                description=message,
+                color=discord.Color.red()
+            )
+            await channel.send(embed=embed)
+            await Embeds.success(ctx, "Message Sent", "Message sent successfully! ✅")
+        elif type == "info":
+            embed = discord.Embed(
+                title=title,
+                description=message,
+                color=discord.Color.blue()
+            )
+            await channel.send(embed=embed)
+            await Embeds.success(ctx, "Message Sent", "Message sent successfully! ✅")
+        else:
+            await Embeds.error(ctx, "Type Error", "Type not found!")
+    except discord.Forbidden:
+        await Embeds.error(ctx, "Permission Error", "I don't have permission to send messages in that channel! 🚫")
+    except Exception as e:
+        await Embeds.error(ctx, "Error", f"An error occurred: {str(e)}")
 
 
 #########################
