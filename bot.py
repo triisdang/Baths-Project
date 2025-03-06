@@ -9,7 +9,7 @@ import json
 from typing import Optional
 from groq import Groq
 import time
-
+import audioop
 #########################
 #       CONSTANTS       #
 #########################
